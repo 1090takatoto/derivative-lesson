@@ -64,15 +64,8 @@ canvas{width:100%;height:clamp(300px,72vh,880px);display:block;
 .legend b.dot{width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;
   display:inline-block;flex:0 0 auto;margin-left:calc(4px * var(--s))}
 
-/* ヘッダから開く設定パネル。授業中に触るが常時出す必要はないのでポップオーバーにする。 */
-.pop{position:relative}
-.popbody{position:absolute;right:0;top:calc(100% + 6px);z-index:20;
-  width:calc(330px * var(--s));background:var(--bg);border:1px solid var(--edge);
-  border-radius:12px;padding:calc(12px * var(--s));
-  box-shadow:0 8px 28px rgba(18,24,31,.18)}
-.popbody[hidden]{display:none}
-.popbody .ttl{font-size:calc(13px * var(--s));font-weight:700;color:var(--t);
-  margin:0 0 calc(8px * var(--s))}
+/* ヘッダのボタン群の区切り。役割ごとにまとまって見えるようにする。 */
+.sep{width:1px;align-self:stretch;background:var(--edge);margin:0 calc(3px * var(--s))}
 
 /* ---------- サイドパネル ---------- */
 aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:calc(2px * var(--s))}
@@ -166,33 +159,14 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <div class="tools">
     <button id="tgPanel" class="sm">パネルを隠す</button>
     <button id="tgSize" class="sm">文字を大きく</button>
+    <span class="sep"></span>
     <button id="tgTan">接線を表示する</button>
-    <span class="pop">
-      <button id="tgView" class="sm">グラフの見え方</button>
-      <div class="popbody" id="viewpop" hidden>
-        <p class="ttl">グラフの見え方</p>
-        <div class="row">
-          <span class="lbl">点の吸着</span>
-          <select id="snap">
-            <option value="mag">整数に吸い付く（おすすめ）</option>
-            <option value="int">整数のみ</option>
-            <option value="ten">0.1 刻み</option>
-            <option value="free">自由（0.001 刻み）</option>
-          </select>
-        </div>
-        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に A・B の座標を表示</label></div>
-        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線を表示</label></div>
-        <div class="row">
-          <button id="rv" class="sm" style="flex:1">表示位置を戻す</button>
-          <button id="rs" class="sm" style="flex:1">すべて初期化</button>
-        </div>
-        <p class="hint">
-          点 A・B はドラッグで移動、背景ドラッグで平行移動、ホイールとピンチで拡大縮小。<br>
-          <kbd>&larr;</kbd><kbd>&rarr;</kbd> で A を 0.1 ずつ（<kbd>Shift</kbd>で1、<kbd>Alt</kbd>で0.001）、
-          <kbd>T</kbd> 接線、<kbd>Space</kbd> 開始と停止、<kbd>P</kbd> パネル開閉。
-        </p>
-      </div>
-    </span>
+    <button id="tgCrd" class="sm">座標を表示</button>
+    <button id="tgAux" class="sm">補助線を表示</button>
+    <button id="tgSnap" class="sm">整数に止める</button>
+    <span class="sep"></span>
+    <button id="rv" class="sm">表示を元に戻す</button>
+    <button id="rs" class="sm">すべて初期化</button>
   </div>
 </header>
 
@@ -325,6 +299,8 @@ let animId = null, drag = null, snapMode = 'mag', showTan = false, sizeStep = 0;
 /* h を 0 に近づけきった「極限に到達した」状態。
    割線を接線と同じ傾きで描いて視覚的に一致させる。点を動かすと解除される。 */
 let atLimit = false;
+/* 旧チェックボックスの置き換え。ヘッダのトグルボタンで切り替える。 */
+let showCoord = true, showAux = true;
 
 /* アニメーションの減衰率。1 に近いほどゆっくり。
    授業では説明しながら見せるため、既定を最も遅い設定にしている。 */
@@ -504,7 +480,7 @@ function draw(){
   if (defined(fa) && defined(fb)){
     ctx.strokeStyle = C.sec; ctx.lineWidth = 3;
     line(a, fa, atLimit ? der(a) : (fb-fa)/(b-a));
-    if (el('hlp').checked && !atLimit){
+    if (showAux && !atLimit){
       ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(b),Y(fa)); ctx.lineTo(X(b),Y(fb));
@@ -529,7 +505,7 @@ function draw(){
     ctx.strokeStyle = C.ring; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(X(a), Y(fa), 14, 0, 7); ctx.stroke();
   }
-  if (el('crd').checked){
+  if (showCoord){
     if (!atLimit && defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
     if (defined(fa)) tag(X(a), Y(fa), 'A (' + fmt(a) + ', ' + fmt(fa) + ')', C.A, true);
   } else {
@@ -585,7 +561,7 @@ function message(fa, fb, h){
   } else if (A < 0.4){
     box.textContent = 'かなり近づきました。平均変化率が f′(a) に寄っていきます。';
   } else {
-    box.textContent = '点 B をドラッグして点 A に近づけてください。';
+    box.textContent = '';
   }
 }
 function sync(){
@@ -654,11 +630,6 @@ el('ap').onclick = apply;
 el('expr').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); apply(); el('expr').blur(); }
 });
-el('snap').onchange = e => {
-  snapMode = e.target.value;
-  if (snapMode === 'int') setA(Math.round(a));
-  else if (snapMode === 'ten') setA(Math.round(a*10)/10);
-};
 document.querySelectorAll('[data-a]').forEach(bt => bt.onclick = () => setA(a + parseFloat(bt.dataset.a)));
 document.querySelectorAll('[data-as]').forEach(bt => bt.onclick = () => setA(parseFloat(bt.dataset.as)));
 
@@ -686,15 +657,12 @@ el('ih').addEventListener('change', () => {
 [el('ia'), el('ih')].forEach(i => i.addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); i.blur(); }
 }));
-el('crd').onchange = draw;
-el('hlp').onchange = draw;
 el('rv').onclick = () => { view(); sync(); };
 el('rs').onclick = () => {
   stopAnim(); atLimit = false; cur = {...PRE[0]}; el('expr').value = PRE[0].src;
   a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
-  snapMode = 'mag'; el('snap').value = 'mag';
-  showTan = false; speed = 0;
-  el('crd').checked = true; el('hlp').checked = true;
+  snapMode = 'mag'; showTan = false; speed = 0;
+  showCoord = true; showAux = true;
   syncToggles(); markSpeed(); view(); sync();
 };
 
@@ -729,24 +697,24 @@ el('anim').onclick = () => {
 function syncToggles(){
   el('tgTan').classList.toggle('on', showTan);
   el('tgTan').textContent = showTan ? '接線を隠す' : '接線を表示する';
+  el('tgCrd').classList.toggle('on', showCoord);
+  el('tgCrd').textContent = showCoord ? '座標を隠す' : '座標を表示';
+  el('tgAux').classList.toggle('on', showAux);
+  el('tgAux').textContent = showAux ? '補助線を隠す' : '補助線を表示';
+  el('tgSnap').classList.toggle('on', snapMode === 'mag');
+  el('tgSnap').textContent = snapMode === 'mag' ? '整数に止める' : '自由に動かす';
   el('lg1').style.borderTop = '3px solid ' + C.sec;
   el('lg2').style.borderTop = '3px dashed ' + C.tan;
   el('lg3').style.borderTop = '3px solid ' + C.curve;
 }
 el('tgTan').onclick = () => { showTan = !showTan; syncToggles(); draw(); };
-el('tgView').onclick = e => {
-  e.stopPropagation();
-  const pop = el('viewpop');
-  pop.hidden = !pop.hidden;
-  el('tgView').classList.toggle('on', !pop.hidden);
+el('tgCrd').onclick = () => { showCoord = !showCoord; syncToggles(); draw(); };
+el('tgAux').onclick = () => { showAux = !showAux; syncToggles(); draw(); };
+el('tgSnap').onclick = () => {
+  // 授業で使うのは「整数に吸い付く」か「自由に動かす」の2択で足りる
+  snapMode = (snapMode === 'mag') ? 'free' : 'mag';
+  syncToggles();
 };
-// 外側をクリックしたら閉じる（パネル内のクリックでは閉じない）
-document.addEventListener('click', e => {
-  const pop = el('viewpop');
-  if (!pop.hidden && !pop.contains(e.target) && e.target !== el('tgView')){
-    pop.hidden = true; el('tgView').classList.remove('on');
-  }
-});
 el('tgPanel').onclick = () => {
   const closed = el('main').classList.toggle('closed');
   el('tgPanel').textContent = closed ? 'パネルを出す' : 'パネルを隠す';
