@@ -286,7 +286,7 @@ const C = {
 
 /* cx,cy は表示の中心、spanX/spanY は最低限見せたい範囲 */
 const PRE = [
-  {src:'x^2',     label:'x²',     f:x=>x*x,           d:x=>2*x,             cx:0,  cy:3.2, spanX:9, spanY:9, a:1, h:2},
+  {src:'x^2',     label:'x²',     f:x=>x*x,           d:x=>2*x,             cx:1,  cy:4.5, spanX:8, spanY:11, a:1, h:1},
   {src:'sin(x)',  label:'sin x',  f:x=>Math.sin(x),   d:x=>Math.cos(x),     cx:0,  cy:0,   spanX:10,spanY:6, a:1, h:2},
   {src:'x^3/8-x', label:'x³/8−x', f:x=>x*x*x/8-x,     d:x=>3*x*x/8-1,       cx:0,  cy:0,   spanX:10,spanY:8, a:1, h:2},
   {src:'sqrt(x)', label:'√x',     f:x=>Math.sqrt(x),  d:x=>0.5/Math.sqrt(x),cx:2.5,cy:1,   spanX:8, spanY:6, a:1, h:3},
@@ -294,7 +294,7 @@ const PRE = [
   {src:'exp(x)',  label:'eˣ',     f:x=>Math.exp(x),   d:x=>Math.exp(x),     cx:0,  cy:3,   spanX:9, spanY:9, a:1, h:2}
 ];
 
-let cur = {...PRE[0]}, a = 1, b = 3;
+let cur = {...PRE[0]}, a = 1, b = 2;
 let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
 let animId = null, drag = null, snapMode = 'mag', showTan = false, sizeStep = 0;
 /* h を 0 に近づけきった「極限に到達した」状態。
@@ -440,6 +440,32 @@ function drawCurve(){
   }
   ctx.stroke();
 }
+/* 補助線の h と f(a+h)−f(a) のラベル。
+   座標タグより先に描くと隠れてしまうため、draw() の最後に呼ぶ。
+   下地を敷いて、グリッドや曲線と重なっても読めるようにする。 */
+function drawAuxLabels(fa, fb){
+  if (!showAux || atLimit || !defined(fa) || !defined(fb)) return;
+  const fs = 15 * FS();
+  ctx.font = 'bold ' + fs + 'px sans-serif';
+  ctx.textBaseline = 'middle';
+  const put = (txt, cx, cy, align) => {
+    const w = ctx.measureText(txt).width;
+    const x0 = align === 'center' ? cx - w/2 : (align === 'left' ? cx : cx - w);
+    ctx.fillStyle = 'rgba(255,255,255,.88)';
+    rr(x0 - 5, cy - fs*0.72, w + 10, fs*1.44, 4); ctx.fill();
+    ctx.fillStyle = C.auxTx; ctx.textAlign = align;
+    ctx.fillText(txt, cx, cy);
+  };
+  if (Math.abs(X(b)-X(a)) > 26){
+    put('h', (X(a)+X(b))/2, Y(fa) + (fb > fa ? fs : -fs), 'center');
+  }
+  if (Math.abs(Y(fb)-Y(fa)) > 44){
+    const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
+    const toRight = X(b) + 12 + tw < W - 4;
+    put(tx, X(b) + (toRight ? 12 : -12), (Y(fa)+Y(fb))/2, toRight ? 'left' : 'right');
+  }
+}
+
 function draw(){
   const fa = cur.f(a), fb = cur.f(b), s = gridStep();
   ctx.clearRect(0,0,W,H);
@@ -482,19 +508,11 @@ function draw(){
     ctx.strokeStyle = C.sec; ctx.lineWidth = 3;
     line(a, fa, atLimit ? der(a) : (fb-fa)/(b-a));
     if (showAux && !atLimit){
+      // 線だけをここで描く。文字は座標タグに隠れないよう drawAuxLabels() で最後に描く。
       ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(b),Y(fa)); ctx.lineTo(X(b),Y(fb));
       ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = C.auxTx; ctx.font = (12.5*FS()) + 'px sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-      if (Math.abs(X(b)-X(a)) > 22) ctx.fillText('h', (X(a)+X(b))/2, Y(fa) + (fb>fa ? 17 : -7));
-      if (Math.abs(Y(fb)-Y(fa)) > 34){
-        ctx.font = (12*FS()) + 'px sans-serif';
-        const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
-        ctx.textAlign = (X(b)+8+tw > W-4) ? 'right' : 'left';
-        ctx.fillText(tx, X(b) + (ctx.textAlign === 'left' ? 7 : -7), (Y(fa)+Y(fb))/2);
-      }
     }
   }
 
@@ -515,6 +533,8 @@ function draw(){
     if (!atLimit && defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
     if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
   }
+
+  drawAuxLabels(fa, fb);
 }
 
 /* ================= 状態の同期 ================= */
