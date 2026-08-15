@@ -346,10 +346,6 @@ function snapX(x){
   return r3(x);
 }
 function setA(v){ const h = b-a; a = r3(v); b = r3(a+h); sync(); }
-function setH(v){
-  if (Math.abs(v) < 0.001) v = (v < 0 ? -0.001 : 0.001);
-  b = r3(a+v); sync();
-}
 
 /* ================= 描画 ================= */
 function gridStep(){
@@ -551,13 +547,13 @@ function draw(){
 
 /* ================= 状態の同期 ================= */
 function clampH(){
-  const h = b-a;
-  if (Math.abs(h) < 0.001) b = a + (h < 0 ? -0.001 : 0.001);
   a = r3(a);
   // アニメーション中は b を 0.001 刻みに丸めない。
   // 丸めると1ステップの減少量が丸め幅に飲まれ、h が 0.02 付近で停滞して
   // 終了条件（h <= 0.001）に永久に到達しなくなる。
   if (!animId) b = r3(b);
+  // h の下限は設けない。B を A に重ねて h=0 を作れることが授業の要点になる。
+  // 自動で近づけるときだけ 0.001 で止める（anim 側で処理）。
 }
 function markChip(){
   const s = norm(el('expr').value);
@@ -574,6 +570,12 @@ function message(fa, fb, h){
   if (!defined(fb)){
     box.className = 'msg err';
     box.textContent = 'x = ' + fmt(b) + ' では f(x) が定義されないため、平均変化率を計算できません。h を変えてください。';
+    return;
+  }
+  if (h === 0){
+    box.className = 'msg warn';
+    box.textContent = '点 B が点 A に重なり、h = 0 になりました。分母が 0 になるため平均変化率を計算できません。'
+      + 'だからこそ h は 0 そのものにはせず、限りなく 0 に近づけます。これが極限の考え方です。';
     return;
   }
   const A = Math.abs(h);
