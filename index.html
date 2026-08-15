@@ -320,7 +320,12 @@ const nf = v => String(r3(v));
 const norm = s => String(s).toLowerCase().replace(/\s+/g,'');
 const isInt = v => Math.abs(v - Math.round(v)) < 1e-9;
 const defined = v => typeof v === 'number' && isFinite(v);
-const FS = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s')) || 1;
+let fsCache = 1;
+const FS = () => fsCache;
+function refreshFS(){
+  // getComputedStyle は毎フレーム呼ぶと負荷になる。倍率は文字サイズを変えたときだけ変わる。
+  fsCache = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s')) || 1;
+}
 
 /* ================= 式のパース =================
    new Function に渡す前に識別子をホワイトリストで検査する。
@@ -357,6 +362,7 @@ function view(){
   oy = H/2 + cur.cy*scale;
 }
 function resize(keep){
+  refreshFS();
   const dpr = Math.min(devicePixelRatio || 1, 2), r = cv.getBoundingClientRect();
   W = r.width; H = r.height;
   cv.width = W*dpr; cv.height = H*dpr;
