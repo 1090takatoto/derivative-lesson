@@ -167,12 +167,12 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <div class="tools">
     <button id="tgPanel" class="sm">パネルを隠す</button>
     <button id="tgSize" class="sm">文字を大きく</button>
-    <button id="tgTan">接線を表示する</button>
+    <button id="rv" class="sm">ズームを戻す</button>
+    <button id="rs" class="sm">すべて初期化</button>
     <button id="tgCrd" class="sm">座標を表示</button>
     <button id="tgAux" class="sm">補助線を表示</button>
     <button id="tgSnap" class="sm">整数に止める</button>
-    <button id="rv" class="sm">ズームを戻す</button>
-    <button id="rs" class="sm">すべて初期化</button>
+    <button id="tgTan">接線を表示する</button>
   </div>
 </header>
 
@@ -180,50 +180,13 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <section class="stage">
     <canvas id="cv"></canvas>
     <div class="legend">
-      <div><i id="lg1"></i><span>A と B を通る直線</span></div>
+      <div><i id="lg1"></i><span>点 A と点 B を通る直線</span></div>
       <div id="lg2row" hidden><i id="lg2"></i><span>接線（A で接する直線）</span></div>
       <div><i id="lg3"></i><span id="lgFn">y = f(x)</span></div>
     </div>
   </section>
 
   <aside id="side">
-
-    <!-- 1. 点 A を動かす -->
-    <details class="sec" open>
-      <summary>点 A を動かす</summary>
-      <div class="body">
-        <div class="grp pa">
-          <div class="chips">
-            <button data-as="0">A を x = 0 へ</button>
-            <button data-as="1">A を x = 1 へ</button>
-            <button data-as="2">A を x = 2 へ</button>
-          </div>
-          <div class="row" style="margin-top:calc(12px * var(--s))">
-            <span class="lbl">A の x 座標（手入力）</span>
-            <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
-          </div>
-        </div>
-      </div>
-    </details>
-
-    <!-- 2. 点 B を動かす -->
-    <details class="sec" open>
-      <summary>点 B を動かす</summary>
-      <div class="body">
-        <div class="grp pb">
-          <div class="chips warm" id="hchips"></div>
-          <div class="row" style="margin-top:calc(12px * var(--s))">
-            <span class="lbl">A に近づける</span>
-            <input id="hr" type="range" min="0" max="1000" value="850">
-            <span class="lbl">遠ざける</span>
-          </div>
-          <div class="row">
-            <span class="lbl">B の x 座標（手入力）</span>
-            <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
-          </div>
-        </div>
-      </div>
-    </details>
 
     <!-- 3. h を 0 に近づける -->
     <details class="sec" open>
@@ -289,7 +252,7 @@ const C = {
 
 /* cx,cy は表示の中心、spanX/spanY は最低限見せたい範囲 */
 const PRE = [
-  {src:'x^2',     label:'x²',     f:x=>x*x,           d:x=>2*x,             cx:1,  cy:4.5, spanX:8, spanY:11, a:1, h:1},
+  {src:'x^2',     label:'x²',     f:x=>x*x,           d:x=>2*x,             cx:1.5, cy:2.5, spanX:6, spanY:7, a:1, h:1},
   {src:'sin(x)',  label:'sin x',  f:x=>Math.sin(x),   d:x=>Math.cos(x),     cx:0,  cy:0,   spanX:10,spanY:6, a:1, h:2},
   {src:'x^3/8-x', label:'x³/8−x', f:x=>x*x*x/8-x,     d:x=>3*x*x/8-1,       cx:0,  cy:0,   spanX:10,spanY:8, a:1, h:2},
   {src:'sqrt(x)', label:'√x',     f:x=>Math.sqrt(x),  d:x=>0.5/Math.sqrt(x),cx:2.5,cy:1,   spanX:8, spanY:6, a:1, h:3},
@@ -300,9 +263,6 @@ const PRE = [
 let cur = {...PRE[0]}, a = 1, b = 2;
 let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
 let animId = null, drag = null, snapMode = 'free', showTan = false, sizeStep = 0;
-/* h を 0 に近づけきった「極限に到達した」状態。
-   割線を接線と同じ傾きで描いて視覚的に一致させる。点を動かすと解除される。 */
-let atLimit = false;
 /* 旧チェックボックスの置き換え。ヘッダのトグルボタンで切り替える。 */
 let showCoord = true, showAux = true;
 
@@ -385,14 +345,11 @@ function snapX(x){
   if (Math.abs(x-t)*scale < 6) return r3(t);
   return r3(x);
 }
-function setA(v){ atLimit = false; const h = b-a; a = r3(v); b = r3(a+h); sync(); }
+function setA(v){ const h = b-a; a = r3(v); b = r3(a+h); sync(); }
 function setH(v){
-  atLimit = false;
   if (Math.abs(v) < 0.001) v = (v < 0 ? -0.001 : 0.001);
   b = r3(a+v); sync();
 }
-// 点 B は絶対座標で指定する（点 A と同じ操作感にするため）
-function setB(v){ setH(r3(v) - a); }
 
 /* ================= 描画 ================= */
 function gridStep(){
@@ -525,8 +482,8 @@ function draw(){
 
   if (defined(fa) && defined(fb)){
     ctx.strokeStyle = C.sec; ctx.lineWidth = 3;
-    line(a, fa, atLimit ? der(a) : (fb-fa)/(b-a));
-    if (showAux && !atLimit){
+    line(a, fa, (fb-fa)/(b-a));
+    if (showAux){
       // 線だけをここで描く。文字は座標タグに隠れないよう drawAuxLabels() で最後に描く。
       ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -535,8 +492,7 @@ function draw(){
     }
   }
 
-  if (atLimit){ if (defined(fa)) pt(X(a), Y(fa), C.B, true); }
-  else if (defined(fb)) pt(X(b), Y(fb), C.B, true);
+  if (defined(fb)) pt(X(b), Y(fb), C.B, true);
   if (defined(fa)) pt(X(a), Y(fa), C.A, false);
 
   if (isInt(a) && defined(fa)){
@@ -548,7 +504,7 @@ function draw(){
   const boxes = [];
 
   // 補助線のラベルを先に確保する。線に沿った位置しか取れず自由度が低いため。
-  if (showAux && !atLimit && defined(fa) && defined(fb)){
+  if (showAux && defined(fa) && defined(fb)){
     const afs = 15 * FS();
     ctx.font = 'bold ' + afs + 'px sans-serif';
     const bh = afs * 1.44;
@@ -572,7 +528,7 @@ function draw(){
     const tfs = 12.5 * FS();
     ctx.font = 'bold ' + tfs + 'px ui-monospace,SFMono-Regular,monospace';
     const th = tfs + 9;
-    if (!atLimit && defined(fb)){
+    if (defined(fb)){
       const txt = 'B (' + fmt(b) + ', ' + fmt(fb) + ')', w = ctx.measureText(txt).width + tfs;
       boxes.push({r:place(aroundPoint(X(b), Y(fb), w, th, false), w, th), txt, fs:tfs, color:C.B});
     }
@@ -583,7 +539,7 @@ function draw(){
   } else {
     ctx.font = 'bold ' + (14*FS()) + 'px sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    if (!atLimit && defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
+    if (defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
     if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
   }
 
@@ -607,19 +563,9 @@ function markChip(){
   const s = norm(el('expr').value);
   [...el('chips').children].forEach((c,i) => c.classList.toggle('sel', PRE[i].src === s));
 }
-function markH(){
-  [...el('hchips').children].forEach(c =>
-    c.classList.toggle('sel', Math.abs(parseFloat(c.dataset.bx) - b) < 1e-9));
-}
 function message(fa, fb, h){
   const box = el('msg');
   box.className = 'msg';
-  if (atLimit && defined(fa)){
-    box.textContent = 'h を限りなく 0 に近づけた結果、割線は接線とぴったり重なりました。'
-      + 'この傾き ' + fmt(der(a)) + ' が微分係数 f′(a) です。'
-      + 'h は 0 そのものにはできませんが、いくらでも 0 に近づけることができます。';
-    return;
-  }
   if (!defined(fa)){
     box.className = 'msg err';
     box.textContent = 'x = ' + fmt(a) + ' では f(x) が定義されないため、微分係数を考えることができません。a を動かしてください。';
@@ -642,19 +588,12 @@ function message(fa, fb, h){
   }
 }
 function sync(){
-  clampH(); markChip(); markH();
+  clampH(); markChip();
   const fa = cur.f(a), fb = cur.f(b), h = b-a, m = (fb-fa)/h, m0 = der(a);
-  const ae = document.activeElement;
-  if (ae !== el('ia')) el('ia').value = nf(a);
-  if (ae !== el('ih')) el('ih').value = nf(b);
-  el('m').textContent = fmt(atLimit ? m0 : m);
+  el('m').textContent = fmt(m);
   el('d').textContent = fmt(m0);
-  el('er').textContent = fmt(atLimit ? 0 : m - m0);
-  el('fx').textContent = atLimit
-    ? 'h → 0 のとき  平均変化率 → ' + fmt(m0)
-    : '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
-  el('hr').value = Math.max(0, Math.min(1000,
-    Math.round(1000*Math.log(Math.abs(h)/0.001)/Math.log(4000))));
+  el('er').textContent = fmt(m - m0);
+  el('fx').textContent = '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
   syncLegend();
   message(fa, fb, h);
   draw();
@@ -664,19 +603,9 @@ function sync(){
 PRE.forEach(p => {
   const bt = document.createElement('button');
   bt.textContent = p.label;
-  bt.onclick = () => { atLimit = false; cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
+  bt.onclick = () => { cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
   el('chips').appendChild(bt);
 });
-[0,2,3].forEach(v => {
-  const bt = document.createElement('button');
-  bt.textContent = 'B を x = ' + v + ' へ'; bt.dataset.bx = v;
-  el('hchips').appendChild(bt);
-});
-el('hchips').onclick = e => {
-  const v = e.target.dataset.bx;
-  if (v === undefined) return;
-  stopAnim(); setB(parseFloat(v));
-};
 SPEEDS.forEach((s,i) => {
   const bt = document.createElement('button');
   bt.textContent = s.label;
@@ -689,7 +618,6 @@ function markSpeed(){
 
 /* ================= 操作 ================= */
 function apply(){
-  atLimit = false;
   const src = el('expr').value;
   try {
     const f = compile(src), hit = PRE.find(p => p.src === norm(src));
@@ -705,36 +633,9 @@ el('ap').onclick = apply;
 el('expr').addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); apply(); el('expr').blur(); }
 });
-document.querySelectorAll('[data-a]').forEach(bt => bt.onclick = () => setA(a + parseFloat(bt.dataset.a)));
-document.querySelectorAll('[data-as]').forEach(bt => bt.onclick = () => setA(parseFloat(bt.dataset.as)));
-
-function readNum(inp, cb, onZero){
-  const v = parseFloat(inp.value.replace(/[^\d.+\-]/g,''));
-  if (!isFinite(v)) { sync(); return; }
-  if (onZero && v === 0){ onZero(); return; }
-  cb(v);
-}
-el('ia').addEventListener('change', () => readNum(el('ia'), setA));
-el('ih').addEventListener('change', () => {
-  stopAnim();
-  const v = parseFloat(el('ih').value.replace(/[^\d.+\-]/g, ''));
-  if (!isFinite(v)) { sync(); return; }
-  if (Math.abs(v - a) < 1e-9){
-    // B を A に重ねようとした＝h が 0。ここが授業の要点なので、黙って直さず理由を示す。
-    sync();
-    el('msg').className = 'msg warn';
-    el('msg').textContent = 'B を A と同じ位置に置くと h = 0 になり、分母が 0 になって平均変化率を計算できません。'
-      + 'だからこそ h を 0 そのものにはせず、限りなく 0 に近づけます。これが極限の考え方です。';
-    return;
-  }
-  setB(v);
-});
-[el('ia'), el('ih')].forEach(i => i.addEventListener('keydown', e => {
-  if (e.key === 'Enter'){ e.preventDefault(); i.blur(); }
-}));
 el('rv').onclick = () => { view(); sync(); };
 el('rs').onclick = () => {
-  stopAnim(); atLimit = false; cur = {...PRE[0]}; el('expr').value = PRE[0].src;
+  stopAnim(); cur = {...PRE[0]}; el('expr').value = PRE[0].src;
   a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
   snapMode = 'free'; showTan = false; speed = 0;
   showCoord = true; showAux = true;
@@ -744,15 +645,8 @@ el('rs').onclick = () => {
 function stopAnim(){
   if (animId){ cancelAnimationFrame(animId); animId = null; el('anim').textContent = '開始'; }
 }
-el('hr').oninput = e => {
-  stopAnim(); atLimit = false;
-  const sg = b < a ? -1 : 1;
-  b = r3(a + sg*0.001*Math.pow(4000, e.target.value/1000));
-  sync();
-};
 el('anim').onclick = () => {
   if (animId){ stopAnim(); return; }
-  atLimit = false;
   if (Math.abs(b-a) < 0.02) b = a + (b < a ? -2.5 : 2.5);
   el('anim').textContent = '停止';
   const k = SPEEDS[speed].k;
@@ -760,7 +654,6 @@ el('anim').onclick = () => {
     b = a + (b-a)*k;
     if (Math.abs(b-a) <= 0.001){
       b = a + (b < a ? -0.001 : 0.001);
-      atLimit = true;            // ここで割線と接線がぴったり重なる
       sync(); stopAnim(); return;
     }
     sync(); animId = requestAnimationFrame(stepFn);
@@ -843,7 +736,6 @@ cv.addEventListener('pointerdown', e => {
   if (Math.min(da,db) < 40){ drag = (da < db) ? 'a' : 'b'; move(p); } else { panFrom = p; }
 });
 function move(p){
-  atLimit = false;
   const x = snapX(iX(p.x));
   if (drag === 'a'){ const h = b-a; a = x; b = r3(a+h); } else { b = x; }
   sync();
