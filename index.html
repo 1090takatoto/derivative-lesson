@@ -326,11 +326,20 @@ function view(){
 }
 function resize(keep){
   refreshFS();
+  const prevW = W, prevH = H;
   const dpr = Math.min(devicePixelRatio || 1, 2), r = cv.getBoundingClientRect();
   W = r.width; H = r.height;
   cv.width = W*dpr; cv.height = H*dpr;
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  if (!keep) view();
+  if (!keep) {
+    view();
+  } else if (prevW && prevH) {
+    // パネルの開閉や画面の回転でキャンバスの大きさが変わっても、
+    // 中央に見えていた位置が中央のままになるよう原点をずらす。
+    // これをしないと、パネルを隠したときにグラフが左に寄ってしまう。
+    ox += (W - prevW) / 2;
+    oy += (H - prevH) / 2;
+  }
   sync();
 }
 
