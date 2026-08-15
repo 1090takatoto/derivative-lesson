@@ -64,6 +64,16 @@ canvas{width:100%;height:clamp(300px,72vh,880px);display:block;
 .legend b.dot{width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;
   display:inline-block;flex:0 0 auto;margin-left:calc(4px * var(--s))}
 
+/* ヘッダから開く設定パネル。授業中に触るが常時出す必要はないのでポップオーバーにする。 */
+.pop{position:relative}
+.popbody{position:absolute;right:0;top:calc(100% + 6px);z-index:20;
+  width:calc(330px * var(--s));background:var(--bg);border:1px solid var(--edge);
+  border-radius:12px;padding:calc(12px * var(--s));
+  box-shadow:0 8px 28px rgba(18,24,31,.18)}
+.popbody[hidden]{display:none}
+.popbody .ttl{font-size:calc(13px * var(--s));font-weight:700;color:var(--t);
+  margin:0 0 calc(8px * var(--s))}
+
 /* ---------- サイドパネル ---------- */
 aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:calc(2px * var(--s))}
 @media (max-width:860px){aside{max-height:none}}
@@ -154,9 +164,35 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
     <span class="frac"><span class="nu">f(a+h) &minus; f(a)</span><span class="de">h</span></span>
   </div>
   <div class="tools">
-    <button id="tgTan" class="on">接線を表示</button>
     <button id="tgPanel" class="sm">パネルを隠す</button>
     <button id="tgSize" class="sm">文字を大きく</button>
+    <button id="tgTan">接線を表示する</button>
+    <span class="pop">
+      <button id="tgView" class="sm">グラフの見え方</button>
+      <div class="popbody" id="viewpop" hidden>
+        <p class="ttl">グラフの見え方</p>
+        <div class="row">
+          <span class="lbl">点の吸着</span>
+          <select id="snap">
+            <option value="mag">整数に吸い付く（おすすめ）</option>
+            <option value="int">整数のみ</option>
+            <option value="ten">0.1 刻み</option>
+            <option value="free">自由（0.001 刻み）</option>
+          </select>
+        </div>
+        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に A・B の座標を表示</label></div>
+        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線を表示</label></div>
+        <div class="row">
+          <button id="rv" class="sm" style="flex:1">表示位置を戻す</button>
+          <button id="rs" class="sm" style="flex:1">すべて初期化</button>
+        </div>
+        <p class="hint">
+          点 A・B はドラッグで移動、背景ドラッグで平行移動、ホイールとピンチで拡大縮小。<br>
+          <kbd>&larr;</kbd><kbd>&rarr;</kbd> で A を 0.1 ずつ（<kbd>Shift</kbd>で1、<kbd>Alt</kbd>で0.001）、
+          <kbd>T</kbd> 接線、<kbd>Space</kbd> 開始と停止、<kbd>P</kbd> パネル開閉。
+        </p>
+      </div>
+    </span>
   </div>
 </header>
 
@@ -177,24 +213,15 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
       <summary>点 A を動かす</summary>
       <div class="body">
         <div class="grp pa">
-          <p class="note"><b>A</b> は青い点そのものの名前、<b>a</b> はその x 座標を表す文字です。
-            接線はこの点 A で引きます。</p>
-          <div class="row">
-            <span class="lbl">x 座標　a =</span>
-            <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
-          </div>
-          <div class="row">
-            <span class="lbl">少し動かす</span>
-            <button class="sm" data-a="-1">&minus;1</button>
-            <button class="sm" data-a="-0.1">&minus;0.1</button>
-            <button class="sm" data-a="0.1">+0.1</button>
-            <button class="sm" data-a="1">+1</button>
-          </div>
           <div class="chips">
             <button data-as="0">A を x = 0 へ</button>
             <button data-as="1">A を x = 1 へ</button>
             <button data-as="2">A を x = 2 へ</button>
             <button id="ar">整数に丸める</button>
+          </div>
+          <div class="row" style="margin-top:calc(12px * var(--s))">
+            <span class="lbl">A の x 座標</span>
+            <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
           </div>
           <div class="eq">点 A の座標 &nbsp; ( <b id="eqa">-</b> , <b id="eqfa">-</b> )</div>
         </div>
@@ -206,20 +233,17 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
       <summary>点 B を動かす</summary>
       <div class="body">
         <div class="grp pb">
-          <p class="note"><b>B</b> は橙の点、<b>h</b> は A から B までの横のずれです。
-            B の x 座標は a + h になります。</p>
-          <div class="row">
-            <span class="lbl">A からのずれ　h =</span>
-            <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
-          </div>
           <div class="chips warm" id="hchips"></div>
           <div class="row" style="margin-top:calc(10px * var(--s))">
             <span class="lbl">小さい</span>
             <input id="hr" type="range" min="0" max="1000" value="850">
             <span class="lbl">大きい</span>
           </div>
-          <div class="row"><button id="hf" class="sm" style="flex:1">A の反対側へ移す</button></div>
-          <div class="eq">点 B の座標 &nbsp; ( a + h = <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
+          <div class="row">
+            <span class="lbl">A からのずれ h</span>
+            <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
+          </div>
+          <div class="eq">点 B の座標 &nbsp; ( <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
         </div>
       </div>
     </details>
@@ -236,33 +260,6 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
         <div class="row">
           <button id="anim" class="primary" style="flex:1">開始</button>
         </div>
-      </div>
-    </details>
-
-    <!-- 4. グラフの見え方 -->
-    <details class="sec">
-      <summary>グラフの見え方（吸着・座標・補助線）</summary>
-      <div class="body">
-        <div class="row">
-          <span class="lbl">点の吸着</span>
-          <select id="snap">
-            <option value="mag">整数に吸い付く（おすすめ）</option>
-            <option value="int">整数のみ</option>
-            <option value="ten">0.1 刻み</option>
-            <option value="free">自由（0.001 刻み）</option>
-          </select>
-        </div>
-        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に A・B の座標を表示</label></div>
-        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線を表示</label></div>
-        <div class="row">
-          <button id="rv" class="sm" style="flex:1">表示位置を戻す</button>
-          <button id="rs" class="sm" style="flex:1">すべて初期化</button>
-        </div>
-        <p class="hint">
-          点 A・B はドラッグで移動、背景ドラッグで平行移動、ホイールとピンチで拡大縮小。<br>
-          <kbd>&larr;</kbd><kbd>&rarr;</kbd> で a を 0.1 ずつ（<kbd>Shift</kbd>で1、<kbd>Alt</kbd>で0.001）、
-          <kbd>T</kbd> 接線、<kbd>Space</kbd> 開始と停止、<kbd>P</kbd> パネル開閉。
-        </p>
       </div>
     </details>
 
@@ -326,7 +323,7 @@ const PRE = [
 
 let cur = {...PRE[0]}, a = 1, b = 3;
 let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
-let animId = null, drag = null, snapMode = 'mag', showTan = true, sizeStep = 0;
+let animId = null, drag = null, snapMode = 'mag', showTan = false, sizeStep = 0;
 /* h を 0 に近づけきった「極限に到達した」状態。
    割線を接線と同じ傾きで描いて視覚的に一致させる。点を動かすと解除される。 */
 let atLimit = false;
@@ -662,7 +659,6 @@ el('snap').onchange = e => {
 document.querySelectorAll('[data-a]').forEach(bt => bt.onclick = () => setA(a + parseFloat(bt.dataset.a)));
 document.querySelectorAll('[data-as]').forEach(bt => bt.onclick = () => setA(parseFloat(bt.dataset.as)));
 el('ar').onclick = () => setA(Math.round(a));
-el('hf').onclick = () => { stopAnim(); setH(-(b-a)); };
 
 function readNum(inp, cb, onZero){
   const v = parseFloat(inp.value.replace(/[^\d.+\-]/g,''));
@@ -691,7 +687,7 @@ el('rs').onclick = () => {
   stopAnim(); atLimit = false; cur = {...PRE[0]}; el('expr').value = PRE[0].src;
   a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
   snapMode = 'mag'; el('snap').value = 'mag';
-  showTan = true; speed = 0;
+  showTan = false; speed = 0;
   el('crd').checked = true; el('hlp').checked = true;
   syncToggles(); markSpeed(); view(); sync();
 };
@@ -726,12 +722,25 @@ el('anim').onclick = () => {
 /* ---- ヘッダのトグル ---- */
 function syncToggles(){
   el('tgTan').classList.toggle('on', showTan);
-  el('tgTan').textContent = showTan ? '接線を表示' : '接線を隠す';
+  el('tgTan').textContent = showTan ? '接線を隠す' : '接線を表示する';
   el('lg1').style.borderTop = '3px solid ' + C.sec;
   el('lg2').style.borderTop = '3px dashed ' + C.tan;
   el('lg3').style.borderTop = '3px solid ' + C.curve;
 }
 el('tgTan').onclick = () => { showTan = !showTan; syncToggles(); draw(); };
+el('tgView').onclick = e => {
+  e.stopPropagation();
+  const pop = el('viewpop');
+  pop.hidden = !pop.hidden;
+  el('tgView').classList.toggle('on', !pop.hidden);
+};
+// 外側をクリックしたら閉じる（パネル内のクリックでは閉じない）
+document.addEventListener('click', e => {
+  const pop = el('viewpop');
+  if (!pop.hidden && !pop.contains(e.target) && e.target !== el('tgView')){
+    pop.hidden = true; el('tgView').classList.remove('on');
+  }
+});
 el('tgPanel').onclick = () => {
   const closed = el('main').classList.toggle('closed');
   el('tgPanel').textContent = closed ? 'パネルを出す' : 'パネルを隠す';
