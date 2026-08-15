@@ -407,7 +407,11 @@ function setB(v){ setH(r3(v) - a); }
 /* ================= 描画 ================= */
 function gridStep(){
   const S=[0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20,50,100];
-  for (const s of S) if (s*scale >= 34) return s;
+  for (const s of S){
+    // 整数の目盛りは桁数が少なく狭い間隔でも読めるので、判定を緩める。
+    // 一律に緩めると大きい画面で 0.5 刻みになって細かすぎるため、分けている。
+    if (s * scale >= (s < 1 ? 34 : 22)) return s;
+  }
   return 200;
 }
 function lab(v,s){ return s < 1 ? v.toFixed(String(s).split('.')[1].length) : String(Math.round(v)); }
