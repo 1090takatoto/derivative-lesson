@@ -53,6 +53,15 @@ main.closed aside{display:none}
   main{grid-template-columns:1fr}
   aside{order:2}
 }
+/* スマホの横向きは高さが足りない。ヘッダを詰めてグラフを1画面に収める。 */
+@media (max-height:520px){
+  .bar{padding:calc(5px * var(--s)) calc(10px * var(--s));gap:calc(9px * var(--s))}
+  h1{font-size:calc(15px * var(--s))}
+  .def{font-size:calc(13px * var(--s))}
+  main{padding:calc(8px * var(--s));gap:calc(8px * var(--s))}
+  canvas{height:calc(100vh - 150px);min-height:190px}
+  aside{max-height:calc(100vh - 150px)}
+}
 
 /* ---------- グラフ ---------- */
 .stage{min-width:0;position:relative}
