@@ -107,9 +107,6 @@ aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:ca
   display:inline-block}
 .grp .note{font-size:calc(11.5px * var(--s));color:var(--sub);margin:0 0 calc(8px * var(--s));
   line-height:1.6}
-.eq{font-size:calc(12.5px * var(--s));color:var(--sub);font-variant-numeric:tabular-nums;
-  margin-top:calc(6px * var(--s))}
-.eq b{color:var(--fg);font-variant-numeric:tabular-nums}
 
 .row{display:flex;align-items:center;gap:calc(7px * var(--s));margin:calc(8px * var(--s)) 0}
 .row:first-child{margin-top:0}
@@ -207,10 +204,9 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
             <button data-as="2">A を x = 2 へ</button>
           </div>
           <div class="row" style="margin-top:calc(12px * var(--s))">
-            <span class="lbl">A の x 座標</span>
+            <span class="lbl">A の x 座標（手入力）</span>
             <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
           </div>
-          <div class="eq">点 A の座標 &nbsp; ( <b id="eqa">-</b> , <b id="eqfa">-</b> )</div>
         </div>
       </div>
     </details>
@@ -227,10 +223,9 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
             <span class="lbl">遠ざける</span>
           </div>
           <div class="row">
-            <span class="lbl">B の x 座標</span>
+            <span class="lbl">B の x 座標（手入力）</span>
             <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
           </div>
-          <div class="eq">点 B の座標 &nbsp; ( <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
         </div>
       </div>
     </details>
@@ -657,9 +652,6 @@ function sync(){
   const ae = document.activeElement;
   if (ae !== el('ia')) el('ia').value = nf(a);
   if (ae !== el('ih')) el('ih').value = nf(b);
-  el('eqa').textContent = fmt(a);   el('eqfa').textContent = fmt(fa);
-  el('eqb').textContent = atLimit ? fmt(a) : fmt(b);
-  el('eqfb').textContent = atLimit ? fmt(fa) : fmt(fb);
   el('m').textContent = fmt(atLimit ? m0 : m);
   el('d').textContent = fmt(m0);
   el('er').textContent = fmt(atLimit ? 0 : m - m0);
