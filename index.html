@@ -78,9 +78,6 @@ canvas{width:100%;height:clamp(300px,72vh,880px);display:block;
 .legend b.dot{width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;
   display:inline-block;flex:0 0 auto;margin-left:calc(4px * var(--s))}
 
-/* ヘッダのボタン群の区切り。役割ごとにまとまって見えるようにする。 */
-.sep{width:1px;align-self:stretch;background:var(--edge);margin:0 calc(3px * var(--s))}
-
 /* ---------- サイドパネル ---------- */
 aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:calc(2px * var(--s))}
 @media (max-width:860px){aside{max-height:none}}
@@ -170,13 +167,11 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <div class="tools">
     <button id="tgPanel" class="sm">パネルを隠す</button>
     <button id="tgSize" class="sm">文字を大きく</button>
-    <span class="sep"></span>
     <button id="tgTan">接線を表示する</button>
     <button id="tgCrd" class="sm">座標を表示</button>
     <button id="tgAux" class="sm">補助線を表示</button>
     <button id="tgSnap" class="sm">整数に止める</button>
-    <span class="sep"></span>
-    <button id="rv" class="sm">表示を元に戻す</button>
+    <button id="rv" class="sm">ズームを戻す</button>
     <button id="rs" class="sm">すべて初期化</button>
   </div>
 </header>
