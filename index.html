@@ -6,20 +6,14 @@
 <title>微分係数 ― 平均変化率から接線の傾きへ</title>
 <style>
 /* ------------------------------------------------------------------
-   配色はテーマごとに CSS 変数で持つ。canvas の描画色も JS 側の THEME と
-   対応させているため、片方だけ変えると食い違うので注意。
+   明るい教室でのプロジェクタ投影を前提に、白背景のみで組んでいる。
+   canvas の描画色は JS 側の C と対応させているため、片方だけ変えないこと。
    --s は文字サイズの倍率。投影時に 1.3 / 1.6 へ上げて後方の席から読ませる。
 ------------------------------------------------------------------- */
 :root{
   --s:1;
-  --bg:#0f1216; --panel:#151b24; --card:#171d27; --edge:#242e3c;
-  --fg:#e8edf3; --sub:#8b98a8; --muted:#5d6a7d;
-  --a:#4da3ff; --b:#ff9f43; --t:#3ddc84; --err:#ff7b72;
-  --btn:#1d2531; --btn-edge:#2c3646;
-}
-html[data-theme="light"]{
-  --bg:#ffffff; --panel:#f4f6f9; --card:#eef1f6; --edge:#d3dae4;
-  --fg:#12181f; --sub:#5a6675; --muted:#8a95a3;
+  --bg:#ffffff; --panel:#f5f7fa; --card:#eef1f6; --edge:#d3dae4;
+  --fg:#12181f; --sub:#5a6675;
   --a:#0b62c4; --b:#c2560a; --t:#0f7a3d; --err:#c02a1f;
   --btn:#ffffff; --btn-edge:#c3ccd8;
 }
@@ -56,55 +50,53 @@ main.closed aside{display:none}
   aside{order:2}
 }
 
-/* ---------- グラフ側 ---------- */
-.stage{min-width:0}
-.cvbox{position:relative}
-canvas{width:100%;height:clamp(260px,56vh,760px);display:block;
+/* ---------- グラフ ---------- */
+.stage{min-width:0;position:relative}
+canvas{width:100%;height:clamp(300px,72vh,880px);display:block;
   background:var(--panel);border:1px solid var(--edge);border-radius:12px;touch-action:none}
 .legend{position:absolute;left:calc(10px * var(--s));top:calc(10px * var(--s));
-  display:flex;flex-direction:column;gap:calc(4px * var(--s));
-  background:color-mix(in srgb,var(--panel) 88%,transparent);
-  border:1px solid var(--edge);border-radius:8px;padding:calc(6px * var(--s)) calc(9px * var(--s));
-  font-size:calc(11.5px * var(--s));pointer-events:none}
-.legend div{display:flex;align-items:center;gap:calc(6px * var(--s));white-space:nowrap}
-.legend i{width:calc(18px * var(--s));height:0;border-top-width:3px;display:inline-block}
-
-/* 主要な数値はグラフ直下。授業中にスクロールせず見せられる位置に置く。 */
-.readout{display:grid;grid-template-columns:2fr 1fr 1fr;gap:calc(8px * var(--s));
-  margin-top:calc(10px * var(--s))}
-@media (max-width:620px){.readout{grid-template-columns:1fr}}
-.ro{background:var(--card);border:1px solid var(--edge);border-radius:10px;
-  padding:calc(8px * var(--s)) calc(11px * var(--s));min-width:0}
-.ro .k{font-size:calc(11.5px * var(--s));color:var(--sub);white-space:nowrap;
-  overflow:hidden;text-overflow:ellipsis}
-.ro .v{font-size:calc(26px * var(--s));font-variant-numeric:tabular-nums;
-  font-weight:700;margin-top:calc(1px * var(--s));white-space:nowrap}
-.ro.main{border-color:var(--a)}.ro.main .v{color:var(--a)}
-.ro.tan .v{color:var(--t)}
-.ro .sub{font-size:calc(12px * var(--s));color:var(--sub);
-  font-family:ui-monospace,monospace;white-space:nowrap;overflow-x:auto}
-.msg{font-size:calc(13px * var(--s));color:var(--t);min-height:calc(38px * var(--s));
-  line-height:1.5;margin-top:calc(8px * var(--s))}
-.msg.err{color:var(--err)}
-.msg.warn{color:var(--b)}
+  display:flex;flex-direction:column;gap:calc(5px * var(--s));
+  background:rgba(255,255,255,.9);
+  border:1px solid var(--edge);border-radius:8px;padding:calc(7px * var(--s)) calc(10px * var(--s));
+  font-size:calc(12px * var(--s));pointer-events:none}
+.legend div{display:flex;align-items:center;gap:calc(7px * var(--s));white-space:nowrap}
+.legend i{width:calc(20px * var(--s));height:0;border-top-width:3px;display:inline-block;flex:0 0 auto}
+.legend b.dot{width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;
+  display:inline-block;flex:0 0 auto;margin-left:calc(4px * var(--s))}
 
 /* ---------- サイドパネル ---------- */
-aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;
-  padding-right:calc(2px * var(--s))}
+aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;padding-right:calc(2px * var(--s))}
 @media (max-width:860px){aside{max-height:none}}
 .sec{background:var(--panel);border:1px solid var(--edge);border-radius:12px;
   margin-bottom:calc(10px * var(--s));overflow:hidden}
 .sec>summary{cursor:pointer;list-style:none;padding:calc(9px * var(--s)) calc(12px * var(--s));
-  font-size:calc(12.5px * var(--s));font-weight:700;color:var(--t);
+  font-size:calc(13px * var(--s));font-weight:700;color:var(--t);
   display:flex;align-items:center;gap:calc(7px * var(--s));user-select:none}
 .sec>summary::-webkit-details-marker{display:none}
 .sec>summary::before{content:"▸";transition:transform .15s;font-size:calc(11px * var(--s))}
 .sec[open]>summary::before{transform:rotate(90deg)}
 .sec .body{padding:0 calc(12px * var(--s)) calc(12px * var(--s))}
 
+/* 点A・点B のまとまり。どちらの点をいじっているかが一目で分かるよう色帯で囲む。 */
+.grp{border-left:calc(4px * var(--s)) solid var(--edge);padding-left:calc(10px * var(--s));
+  margin-bottom:calc(14px * var(--s))}
+.grp.pa{border-left-color:var(--a)}
+.grp.pb{border-left-color:var(--b)}
+.grp .hd{font-size:calc(13px * var(--s));font-weight:700;margin-bottom:calc(6px * var(--s));
+  display:flex;align-items:center;gap:calc(6px * var(--s))}
+.grp.pa .hd{color:var(--a)}
+.grp.pb .hd{color:var(--b)}
+.grp .hd .dot{width:calc(12px * var(--s));height:calc(12px * var(--s));border-radius:50%;
+  display:inline-block}
+.grp .note{font-size:calc(11.5px * var(--s));color:var(--sub);margin:0 0 calc(8px * var(--s));
+  line-height:1.6}
+.eq{font-size:calc(12.5px * var(--s));color:var(--sub);font-variant-numeric:tabular-nums;
+  margin-top:calc(6px * var(--s))}
+.eq b{color:var(--fg);font-variant-numeric:tabular-nums}
+
 .row{display:flex;align-items:center;gap:calc(7px * var(--s));margin:calc(8px * var(--s)) 0}
 .row:first-child{margin-top:0}
-.lbl{font-size:calc(12px * var(--s));color:var(--sub);min-width:calc(30px * var(--s))}
+.lbl{font-size:calc(12.5px * var(--s));color:var(--sub);white-space:nowrap}
 select,button,input[type=text]{background:var(--btn);color:var(--fg);
   border:1px solid var(--btn-edge);border-radius:9px;
   padding:calc(8px * var(--s)) calc(11px * var(--s));font-size:calc(13.5px * var(--s));
@@ -113,38 +105,43 @@ button{cursor:pointer}
 button:hover{border-color:var(--a)}
 select{flex:1}
 input[type=text]{flex:1;font-family:ui-monospace,monospace}
-input.num{flex:0 1 calc(92px * var(--s));text-align:center;font-variant-numeric:tabular-nums}
+input.num{flex:0 1 calc(96px * var(--s));text-align:center;font-variant-numeric:tabular-nums;
+  font-size:calc(15px * var(--s));font-weight:700}
 input[type=range]{flex:1;accent-color:var(--b)}
 button.primary{background:var(--a);color:#fff;border-color:var(--a);font-weight:700}
-html[data-theme="light"] button.primary{color:#fff}
-button.on{background:var(--t);color:#04210f;border-color:var(--t);font-weight:700}
-html[data-theme="light"] button.on{color:#fff}
+button.on{background:var(--t);color:#fff;border-color:var(--t);font-weight:700}
 button.sm{padding:calc(7px * var(--s)) calc(10px * var(--s));font-size:calc(12.5px * var(--s))}
 .chips{display:flex;flex-wrap:wrap;gap:calc(5px * var(--s));margin-top:calc(7px * var(--s))}
 .chips button{padding:calc(5px * var(--s)) calc(10px * var(--s));
-  font-size:calc(12px * var(--s));border-radius:20px}
+  font-size:calc(12.5px * var(--s));border-radius:20px}
 .chips button.sel{background:var(--a);color:#fff;border-color:var(--a);font-weight:700}
 .chips.warm button.sel{background:var(--b);color:#fff;border-color:var(--b)}
 .hint{font-size:calc(11.5px * var(--s));color:var(--sub);margin:calc(8px * var(--s)) 0 0;line-height:1.6}
-
-/* 収束表。h を小さくすると平均変化率が一定値に近づくことを数値で示す。 */
-table.conv{width:100%;border-collapse:collapse;font-size:calc(12.5px * var(--s));
-  font-variant-numeric:tabular-nums;margin-top:calc(2px * var(--s))}
-table.conv th{color:var(--sub);font-size:calc(11px * var(--s));font-weight:600;
-  text-align:right;padding:calc(3px * var(--s)) calc(5px * var(--s));
-  border-bottom:1px solid var(--edge)}
-table.conv td{text-align:right;padding:calc(4px * var(--s)) calc(5px * var(--s));
-  border-bottom:1px solid color-mix(in srgb,var(--edge) 50%,transparent)}
-table.conv tr.cur td{background:color-mix(in srgb,var(--a) 18%,transparent);font-weight:700}
-table.conv td.m{color:var(--a)}
-table.conv .goal td{border-top:2px solid var(--t);border-bottom:none;color:var(--t);font-weight:700}
 label.ck{font-size:calc(12.5px * var(--s));color:var(--sub);display:flex;
   align-items:center;gap:calc(6px * var(--s));cursor:pointer}
 code{background:var(--card);padding:1px calc(5px * var(--s));border-radius:4px;
   font-size:calc(11.5px * var(--s))}
 kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
-  border-radius:4px;padding:0 calc(5px * var(--s));font-size:calc(11px * var(--s));
-  font-family:inherit}
+  border-radius:4px;padding:0 calc(5px * var(--s));font-size:calc(11px * var(--s));font-family:inherit}
+
+/* ---------- 数値（パネル最下部） ---------- */
+.ro{background:var(--card);border:1px solid var(--edge);border-radius:10px;
+  padding:calc(8px * var(--s)) calc(11px * var(--s));margin-bottom:calc(8px * var(--s))}
+.ro .k{font-size:calc(11.5px * var(--s));color:var(--sub)}
+.ro .v{font-size:calc(30px * var(--s));font-variant-numeric:tabular-nums;
+  font-weight:700;line-height:1.15;white-space:nowrap}
+.ro.main{border-color:var(--a);background:#fff}
+.ro.main .v{color:var(--a)}
+.ro.tan .v{color:var(--t)}
+.ro .sub{font-size:calc(12px * var(--s));color:var(--sub);
+  font-family:ui-monospace,monospace;white-space:nowrap;overflow-x:auto}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:calc(8px * var(--s))}
+.two .ro{margin-bottom:0}
+.two .ro .v{font-size:calc(22px * var(--s))}
+.msg{font-size:calc(12.5px * var(--s));color:var(--t);line-height:1.6;
+  margin-top:calc(8px * var(--s));min-height:calc(30px * var(--s))}
+.msg.err{color:var(--err)}
+.msg.warn{color:var(--b);font-weight:700}
 </style>
 </head>
 <body>
@@ -158,112 +155,87 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   </div>
   <div class="tools">
     <button id="tgTan" class="on">接線を表示</button>
-    <button id="tgBoth" class="sm">左右から近づける</button>
     <button id="tgPanel" class="sm">パネルを隠す</button>
-    <button id="tgTheme" class="sm">白い背景</button>
     <button id="tgSize" class="sm">文字を大きく</button>
   </div>
 </header>
 
 <main id="main">
   <section class="stage">
-    <div class="cvbox">
-      <canvas id="cv"></canvas>
-      <div class="legend">
-        <div><i id="lg1"></i><span>割線（2点 A, B を通る直線）</span></div>
-        <div><i id="lg2"></i><span>接線（点 A で接する直線）</span></div>
-        <div><i id="lg3"></i><span>y = f(x)</span></div>
-      </div>
+    <canvas id="cv"></canvas>
+    <div class="legend">
+      <div><b class="dot" style="background:#0b62c4"></b><span>点 A ( a , f(a) ) … 接線を引く点</span></div>
+      <div><b class="dot" style="background:#c2560a"></b><span>点 B ( a+h , f(a+h) ) … 動かす点</span></div>
+      <div><i id="lg1"></i><span>割線（A と B を通る直線）</span></div>
+      <div><i id="lg2"></i><span>接線（A で接する直線）</span></div>
+      <div><i id="lg3"></i><span>y = f(x)</span></div>
     </div>
-
-    <div class="readout">
-      <div class="ro main">
-        <div class="k">平均変化率 ＝ ( f(a+h) &minus; f(a) ) &divide; h</div>
-        <div class="v" id="m">-</div>
-        <div class="sub" id="fx">-</div>
-      </div>
-      <div class="ro tan">
-        <div class="k">微分係数 f&prime;(a)</div>
-        <div class="v" id="d">-</div>
-      </div>
-      <div class="ro">
-        <div class="k">差（平均変化率 &minus; f&prime;(a)）</div>
-        <div class="v" id="er">-</div>
-      </div>
-    </div>
-
-    <div class="msg" id="msg"></div>
   </section>
 
   <aside id="side">
 
+    <!-- 1. 点を動かす -->
     <details class="sec" open>
       <summary>点を動かす</summary>
       <div class="body">
-        <div class="row">
-          <span class="lbl" style="color:var(--a);font-weight:700">a =</span>
-          <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
-          <button class="sm" data-a="-1">&minus;1</button>
-          <button class="sm" data-a="-0.1">&minus;0.1</button>
-          <button class="sm" data-a="0.1">+0.1</button>
-          <button class="sm" data-a="1">+1</button>
-        </div>
-        <div class="chips">
-          <button id="ar">整数に丸める</button>
-          <button data-as="0">a = 0</button>
-          <button data-as="1">a = 1</button>
-          <button data-as="2">a = 2</button>
+
+        <div class="grp pa">
+          <div class="hd"><span class="dot" style="background:var(--a)"></span>点 A（青）を置く場所</div>
+          <p class="note">接線を引く点です。この x 座標を <b>a</b> と呼びます。</p>
+          <div class="row">
+            <span class="lbl">a =</span>
+            <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
+            <button class="sm" data-a="-1">&minus;1</button>
+            <button class="sm" data-a="-0.1">&minus;0.1</button>
+            <button class="sm" data-a="0.1">+0.1</button>
+            <button class="sm" data-a="1">+1</button>
+          </div>
+          <div class="chips">
+            <button data-as="0">a = 0</button>
+            <button data-as="1">a = 1</button>
+            <button data-as="2">a = 2</button>
+            <button id="ar">整数に丸める</button>
+          </div>
+          <div class="eq">点 A の座標 &nbsp; ( <b id="eqa">-</b> , <b id="eqfa">-</b> )</div>
         </div>
 
-        <div class="row" style="margin-top:calc(14px * var(--s))">
-          <span class="lbl" style="color:var(--b);font-weight:700">h =</span>
-          <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
-          <button id="hf" class="sm">符号を反転</button>
+        <div class="grp pb">
+          <div class="hd"><span class="dot" style="background:var(--b)"></span>点 B（橙）を A からどれだけ離すか</div>
+          <p class="note">A から横に <b>h</b> だけ離れた点が B です。この h を 0 に近づけていきます。</p>
+          <div class="row">
+            <span class="lbl">h =</span>
+            <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
+            <button id="hf" class="sm">A の反対側へ</button>
+          </div>
+          <div class="chips warm" id="hchips"></div>
+          <div class="row" style="margin-top:calc(10px * var(--s))">
+            <span class="lbl">小さい</span>
+            <input id="hr" type="range" min="0" max="1000" value="850">
+            <span class="lbl">大きい</span>
+          </div>
+          <div class="eq">点 B の座標 &nbsp; ( a + h = <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
         </div>
-        <div class="chips warm" id="hchips"></div>
 
-        <div class="row" style="margin-top:calc(12px * var(--s))">
-          <span class="lbl" style="min-width:calc(64px * var(--s))">h を拡大</span>
-          <input id="hr" type="range" min="0" max="1000" value="850">
+        <div class="grp">
+          <div class="hd">h を 0 に近づける</div>
+          <div class="row">
+            <span class="lbl">速さ</span>
+            <span class="chips" id="spd" style="margin:0"></span>
+          </div>
+          <div class="row">
+            <button id="anim" class="primary" style="flex:1">開始</button>
+          </div>
         </div>
-        <div class="row">
-          <button id="anim" class="primary" style="flex:1">h を 0 に近づける</button>
-        </div>
-        <p class="hint">スライダーは右へ動かすほど h が大きくなります。</p>
+
       </div>
     </details>
 
-    <details class="sec" open>
-      <summary>h を小さくしたときの平均変化率</summary>
-      <div class="body">
-        <table class="conv">
-          <thead><tr><th style="text-align:left">h</th><th>a+h</th><th>平均変化率</th></tr></thead>
-          <tbody id="convb"></tbody>
-        </table>
-        <p class="hint">h を 0 に近づけると、平均変化率が一定の値に近づきます。その行き先が微分係数 f&prime;(a) です。</p>
-      </div>
-    </details>
-
-    <details class="sec">
-      <summary>関数を変える</summary>
-      <div class="body">
-        <div class="row">
-          <span class="lbl" style="min-width:calc(44px * var(--s))">f(x) =</span>
-          <input id="expr" type="text" value="x^2" spellcheck="false" autocapitalize="off">
-          <button id="ap" class="sm primary">適用</button>
-        </div>
-        <div class="chips" id="chips"></div>
-        <p class="hint">入力例：<code>x^2</code> <code>sin(x)</code> <code>x^3/8-x</code>
-          <code>sqrt(x)</code> <code>1/x</code> <code>exp(x)</code> <code>log(x)</code><br>
-          <code>log</code> は自然対数（底 e）です。</p>
-      </div>
-    </details>
-
+    <!-- 2. 細かい設定 -->
     <details class="sec">
       <summary>細かい設定</summary>
       <div class="body">
         <div class="row">
-          <span class="lbl" style="min-width:calc(40px * var(--s))">吸着</span>
+          <span class="lbl">点の吸着</span>
           <select id="snap">
             <option value="mag">整数に吸い付く（おすすめ）</option>
             <option value="int">整数のみ</option>
@@ -280,8 +252,41 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
         <p class="hint">
           点 A・B はドラッグで移動、背景ドラッグで平行移動、ホイールとピンチで拡大縮小。<br>
           <kbd>&larr;</kbd><kbd>&rarr;</kbd> で a を 0.1 ずつ（<kbd>Shift</kbd>で1、<kbd>Alt</kbd>で0.001）、
-          <kbd>T</kbd> 接線、<kbd>Space</kbd> アニメーション、<kbd>P</kbd> パネル開閉。
+          <kbd>T</kbd> 接線、<kbd>Space</kbd> 開始と停止、<kbd>P</kbd> パネル開閉。
         </p>
+      </div>
+    </details>
+
+    <!-- 3. 関数を変える -->
+    <details class="sec">
+      <summary>関数を変える</summary>
+      <div class="body">
+        <div class="row">
+          <span class="lbl">f(x) =</span>
+          <input id="expr" type="text" value="x^2" spellcheck="false" autocapitalize="off">
+          <button id="ap" class="sm primary">適用</button>
+        </div>
+        <div class="chips" id="chips"></div>
+        <p class="hint">入力例：<code>x^2</code> <code>sin(x)</code> <code>x^3/8-x</code>
+          <code>sqrt(x)</code> <code>1/x</code> <code>exp(x)</code> <code>log(x)</code><br>
+          <code>log</code> は自然対数（底 e）です。</p>
+      </div>
+    </details>
+
+    <!-- 4. 数値 -->
+    <details class="sec" open>
+      <summary>数値</summary>
+      <div class="body">
+        <div class="ro main">
+          <div class="k">平均変化率 ＝ ( f(a+h) &minus; f(a) ) &divide; h</div>
+          <div class="v" id="m">-</div>
+          <div class="sub" id="fx">-</div>
+        </div>
+        <div class="two">
+          <div class="ro tan"><div class="k">微分係数 f&prime;(a)</div><div class="v" id="d">-</div></div>
+          <div class="ro"><div class="k">差</div><div class="v" id="er">-</div></div>
+        </div>
+        <div class="msg" id="msg"></div>
       </div>
     </details>
 
@@ -293,31 +298,35 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
 const el = i => document.getElementById(i);
 const cv = el('cv'), ctx = cv.getContext('2d');
 
-/* canvas 内は CSS 変数を使えないので、テーマ色をここで持つ。
-   :root の定義と対応させること。 */
-const THEME = {
-  dark:  {grid:'#1d2532', axis:'#3a465c', tick:'#7e8b9c', curve:'#8494a8',
-          sec:'#4da3ff', tan:'#3ddc84', aux:'#5d6a7d', auxTx:'#94a2b4',
-          A:'#4da3ff', B:'#ff9f43', tagBg:'rgba(12,15,20,.88)', ring:'rgba(232,237,243,.85)'},
-  light: {grid:'#e3e8ef', axis:'#9aa7b6', tick:'#5a6675', curve:'#46536a',
-          sec:'#0b62c4', tan:'#0f7a3d', aux:'#9aa7b6', auxTx:'#5a6675',
-          A:'#0b62c4', B:'#c2560a', tagBg:'rgba(255,255,255,.92)', ring:'rgba(18,24,31,.75)'}
+/* canvas 内では CSS 変数を使えないので、:root と対応する色をここに持つ */
+const C = {
+  grid:'#e3e8ef', axis:'#9aa7b6', tick:'#5a6675', curve:'#46536a',
+  sec:'#0b62c4', tan:'#0f7a3d', aux:'#9aa7b6', auxTx:'#5a6675',
+  A:'#0b62c4', B:'#c2560a', tagBg:'rgba(255,255,255,.93)', ring:'rgba(18,24,31,.7)', pointEdge:'#ffffff'
 };
-let theme = 'dark', C = THEME.dark;
 
-/* ---- プリセット関数。cx,cy は表示の中心、spanX/spanY は最低限見せたい範囲 ---- */
+/* cx,cy は表示の中心、spanX/spanY は最低限見せたい範囲 */
 const PRE = [
-  {src:'x^2',     label:'x²',  f:x=>x*x,          d:x=>2*x,            cx:0,  cy:3.2, spanX:9, spanY:9,  a:1, h:2},
-  {src:'sin(x)',  label:'sin x',    f:x=>Math.sin(x),  d:x=>Math.cos(x),    cx:0,  cy:0,   spanX:10,spanY:6,  a:1, h:2},
-  {src:'x^3/8-x', label:'x³/8−x', f:x=>x*x*x/8-x, d:x=>3*x*x/8-1, cx:0,  cy:0,   spanX:10,spanY:8,  a:1, h:2},
-  {src:'sqrt(x)', label:'√x',  f:x=>Math.sqrt(x), d:x=>0.5/Math.sqrt(x),cx:2.5,cy:1,  spanX:8, spanY:6,  a:1, h:3},
-  {src:'1/x',     label:'1/x',      f:x=>1/x,          d:x=>-1/(x*x),       cx:0,  cy:0,   spanX:9, spanY:9,  a:1, h:2},
-  {src:'exp(x)',  label:'eˣ',  f:x=>Math.exp(x),  d:x=>Math.exp(x),    cx:0,  cy:3,   spanX:9, spanY:9,  a:1, h:2}
+  {src:'x^2',     label:'x²',     f:x=>x*x,           d:x=>2*x,             cx:0,  cy:3.2, spanX:9, spanY:9, a:1, h:2},
+  {src:'sin(x)',  label:'sin x',  f:x=>Math.sin(x),   d:x=>Math.cos(x),     cx:0,  cy:0,   spanX:10,spanY:6, a:1, h:2},
+  {src:'x^3/8-x', label:'x³/8−x', f:x=>x*x*x/8-x,     d:x=>3*x*x/8-1,       cx:0,  cy:0,   spanX:10,spanY:8, a:1, h:2},
+  {src:'sqrt(x)', label:'√x',     f:x=>Math.sqrt(x),  d:x=>0.5/Math.sqrt(x),cx:2.5,cy:1,   spanX:8, spanY:6, a:1, h:3},
+  {src:'1/x',     label:'1/x',    f:x=>1/x,           d:x=>-1/(x*x),        cx:0,  cy:0,   spanX:9, spanY:9, a:1, h:2},
+  {src:'exp(x)',  label:'eˣ',     f:x=>Math.exp(x),   d:x=>Math.exp(x),     cx:0,  cy:3,   spanX:9, spanY:9, a:1, h:2}
 ];
 
 let cur = {...PRE[0]}, a = 1, b = 3;
 let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
-let animId = null, drag = null, snapMode = 'mag', showTan = true, showBoth = false, sizeStep = 0;
+let animId = null, drag = null, snapMode = 'mag', showTan = true, sizeStep = 0;
+
+/* アニメーションの減衰率。1 に近いほどゆっくり。
+   授業では説明しながら見せるため、既定を最も遅い設定にしている。 */
+const SPEEDS = [
+  {label:'ゆっくり', k:0.990},
+  {label:'ふつう',   k:0.975},
+  {label:'はやい',   k:0.950}
+];
+let speed = 0;
 
 const X = x => ox + x*scale, Y = y => oy - y*scale;
 const iX = p => (p-ox)/scale, iY = p => (oy-p)/scale;
@@ -327,6 +336,7 @@ const nf = v => String(r3(v));
 const norm = s => String(s).toLowerCase().replace(/\s+/g,'');
 const isInt = v => Math.abs(v - Math.round(v)) < 1e-9;
 const defined = v => typeof v === 'number' && isFinite(v);
+const FS = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s')) || 1;
 
 /* ================= 式のパース =================
    new Function に渡す前に識別子をホワイトリストで検査する。
@@ -357,8 +367,7 @@ function der(x){
 
 /* ================= 表示範囲 ================= */
 function view(){
-  // x 方向・y 方向とも最低限の範囲が入るように倍率を決める。
-  // x と y で同じ scale を使うので、傾きが見た目のまま正しく見える。
+  // x と y で同じ scale を使うので、画面上の傾きが数学的な傾きと一致する
   scale = Math.min(W / cur.spanX, H / cur.spanY);
   ox = W/2 - cur.cx*scale;
   oy = H/2 + cur.cy*scale;
@@ -402,16 +411,16 @@ function rr(x,y,w,h,r){
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
 function tag(px,py,txt,color,below){
-  const fs = 12 * FS();
+  const fs = 12.5 * FS();
   ctx.font = 'bold ' + fs + 'px ui-monospace,SFMono-Regular,monospace';
-  const w = ctx.measureText(txt).width + fs, hh = fs + 8;
+  const w = ctx.measureText(txt).width + fs, hh = fs + 9;
   let lx = px + 14, ly = below ? py + 12 : py - (hh + 11);
   if (lx + w > W-3) lx = px - 14 - w;
   if (lx < 3) lx = 3;
   if (ly < 3) ly = py + 12;
   if (ly > H - hh - 2) ly = py - (hh + 11);
   ctx.fillStyle = C.tagBg; rr(lx,ly,w,hh,5); ctx.fill();
-  ctx.strokeStyle = color; ctx.globalAlpha = .6; ctx.lineWidth = 1;
+  ctx.strokeStyle = color; ctx.globalAlpha = .7; ctx.lineWidth = 1.2;
   rr(lx,ly,w,hh,5); ctx.stroke(); ctx.globalAlpha = 1;
   ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText(txt, lx + fs/2, ly + hh/2);
@@ -425,13 +434,10 @@ function line(x0,y0,m){
 }
 function pt(px,py,c,halo){
   if (!isFinite(px) || !isFinite(py)) return;
-  if (halo){ ctx.fillStyle = c + '33'; ctx.beginPath(); ctx.arc(px,py,20,0,7); ctx.fill(); }
-  ctx.fillStyle = c; ctx.strokeStyle = getComputedStyle(document.body).backgroundColor;
-  ctx.lineWidth = 3;
+  if (halo){ ctx.fillStyle = c + '2e'; ctx.beginPath(); ctx.arc(px,py,20,0,7); ctx.fill(); }
+  ctx.fillStyle = c; ctx.strokeStyle = C.pointEdge; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.arc(px,py,8,0,7); ctx.fill(); ctx.stroke();
 }
-const FS = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s')) || 1;
-
 function drawCurve(){
   ctx.strokeStyle = C.curve; ctx.lineWidth = 2.5;
   ctx.beginPath();
@@ -440,39 +446,17 @@ function drawCurve(){
     const y = cur.f(iX(px));
     if (!defined(y)) { prev = null; continue; }
     const py = Y(y);
-    // 1/x のような不連続点で左右が繋がり、存在しない漸近線が描かれるのを防ぐ。
-    // 隣り合う点が画面高さの2倍以上跳んだら別の枝とみなして線を切る。
+    // 1/x のような不連続点で左右が繋がり、存在しない漸近線が描かれるのを防ぐ
     if (prev !== null && Math.abs(py - prev) > H*2) prev = null;
     if (prev === null) ctx.moveTo(px,py); else ctx.lineTo(px,py);
     prev = py;
   }
   ctx.stroke();
 }
-function drawSecant(bx, color){
-  const fa = cur.f(a), fb = cur.f(bx), m = (fb-fa)/(bx-a);
-  if (!defined(fa) || !defined(fb)) return;
-  ctx.strokeStyle = color; ctx.lineWidth = 3; line(a, fa, m);
-  if (el('hlp').checked){
-    ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(bx),Y(fa)); ctx.lineTo(X(bx),Y(fb));
-    ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = C.auxTx; ctx.font = (12*FS()) + 'px sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    if (Math.abs(X(bx)-X(a)) > 22) ctx.fillText('h', (X(a)+X(bx))/2, Y(fa) + (fb>fa ? 16 : -7));
-    if (Math.abs(Y(fb)-Y(fa)) > 34){
-      ctx.font = (11.5*FS()) + 'px sans-serif';
-      const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
-      ctx.textAlign = (X(bx)+8+tw > W-4) ? 'right' : 'left';
-      ctx.fillText(tx, X(bx) + (ctx.textAlign === 'left' ? 7 : -7), (Y(fa)+Y(fb))/2);
-    }
-  }
-}
 function draw(){
-  const fa = cur.f(a), s = gridStep();
+  const fa = cur.f(a), fb = cur.f(b), s = gridStep();
   ctx.clearRect(0,0,W,H);
 
-  // 目盛り
   ctx.lineWidth = 1;
   const x0 = Math.ceil(iX(0)/s)*s, x1 = iX(W), y0 = Math.ceil(iY(H)/s)*s, y1 = iY(0);
   for (let g = x0; g <= x1; g += s){
@@ -483,12 +467,12 @@ function draw(){
     ctx.strokeStyle = Math.abs(g) < s/2 ? C.axis : C.grid;
     ctx.beginPath(); ctx.moveTo(0,Y(g)); ctx.lineTo(W,Y(g)); ctx.stroke();
   }
-  ctx.fillStyle = C.tick; ctx.font = (11.5*FS()) + 'px sans-serif';
+  ctx.fillStyle = C.tick; ctx.font = (12*FS()) + 'px sans-serif';
   const ay = Math.min(H-4, Math.max(12, Y(0))), ax = Math.min(W-6, Math.max(14, X(0)));
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
   for (let g = x0; g <= x1; g += s){
     if (Math.abs(g) < s/2) continue;
-    ctx.fillText(lab(g,s), X(g), Math.min(H-16, ay+4));
+    ctx.fillText(lab(g,s), X(g), Math.min(H-17, ay+4));
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let g = y0; g <= y1; g += s){
@@ -496,8 +480,8 @@ function draw(){
     ctx.fillText(lab(g,s), Math.max(26, ax-6), Y(g));
   }
   ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('0', ax-4, ay+4);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText('x', W-14, Math.min(H-18, ay+4));
+  ctx.textAlign = 'left';
+  ctx.fillText('x', W-14, Math.min(H-19, ay+4));
   ctx.fillText('y', Math.min(W-14, ax+6), 4);
 
   drawCurve();
@@ -507,15 +491,26 @@ function draw(){
     line(a, fa, der(a)); ctx.setLineDash([]);
   }
 
-  if (showBoth){
-    const mirror = r3(a - (b-a));
-    ctx.globalAlpha = .5; drawSecant(mirror, C.sec); ctx.globalAlpha = 1;
-    const fm = cur.f(mirror);
-    if (defined(fm)) pt(X(mirror), Y(fm), C.B, false);
+  if (defined(fa) && defined(fb)){
+    ctx.strokeStyle = C.sec; ctx.lineWidth = 3;
+    line(a, fa, (fb-fa)/(b-a));
+    if (el('hlp').checked){
+      ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(b),Y(fa)); ctx.lineTo(X(b),Y(fb));
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = C.auxTx; ctx.font = (12.5*FS()) + 'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      if (Math.abs(X(b)-X(a)) > 22) ctx.fillText('h', (X(a)+X(b))/2, Y(fa) + (fb>fa ? 17 : -7));
+      if (Math.abs(Y(fb)-Y(fa)) > 34){
+        ctx.font = (12*FS()) + 'px sans-serif';
+        const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
+        ctx.textAlign = (X(b)+8+tw > W-4) ? 'right' : 'left';
+        ctx.fillText(tx, X(b) + (ctx.textAlign === 'left' ? 7 : -7), (Y(fa)+Y(fb))/2);
+      }
+    }
   }
-  drawSecant(b, C.sec);
 
-  const fb = cur.f(b);
   if (defined(fb)) pt(X(b), Y(fb), C.B, true);
   if (defined(fa)) pt(X(a), Y(fa), C.A, false);
 
@@ -527,26 +522,11 @@ function draw(){
     if (defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
     if (defined(fa)) tag(X(a), Y(fa), 'A (' + fmt(a) + ', ' + fmt(fa) + ')', C.A, true);
   } else {
-    ctx.font = 'bold ' + (13*FS()) + 'px sans-serif';
+    ctx.font = 'bold ' + (14*FS()) + 'px sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
     if (defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
     if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
   }
-}
-
-/* ================= 収束表 ================= */
-const CONV = [1, 0.5, 0.1, 0.01, 0.001];
-function buildConv(){
-  const sign = (b < a) ? -1 : 1, fa = cur.f(a), curH = Math.abs(b-a);
-  const rows = CONV.map(h => {
-    const hh = sign*h, fb = cur.f(a+hh);
-    const m = (defined(fa) && defined(fb)) ? (fb-fa)/hh : NaN;
-    const isCur = Math.abs(curH - h) < 1e-9;
-    return '<tr class="' + (isCur ? 'cur' : '') + '"><td>' + nf(hh) + '</td><td>' +
-           fmt(a+hh) + '</td><td class="m">' + fmt(m) + '</td></tr>';
-  });
-  rows.push('<tr class="goal"><td>0 に近づける</td><td>&rarr;</td><td>' + fmt(der(a)) + '</td></tr>');
-  el('convb').innerHTML = rows.join('');
 }
 
 /* ================= 状態の同期 ================= */
@@ -594,13 +574,14 @@ function sync(){
   const ae = document.activeElement;
   if (ae !== el('ia')) el('ia').value = nf(a);
   if (ae !== el('ih')) el('ih').value = nf(h);
+  el('eqa').textContent = fmt(a);   el('eqfa').textContent = fmt(fa);
+  el('eqb').textContent = fmt(b);   el('eqfb').textContent = fmt(fb);
   el('m').textContent = fmt(m);
   el('d').textContent = fmt(m0);
   el('er').textContent = fmt(m - m0);
   el('fx').textContent = '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
   el('hr').value = Math.max(0, Math.min(1000,
     Math.round(1000*Math.log(Math.abs(h)/0.001)/Math.log(4000))));
-  buildConv();
   message(fa, fb, h);
   draw();
 }
@@ -622,6 +603,15 @@ el('hchips').onclick = e => {
   if (v === undefined) return;
   stopAnim(); setH((b < a ? -1 : 1) * parseFloat(v));
 };
+SPEEDS.forEach((s,i) => {
+  const bt = document.createElement('button');
+  bt.textContent = s.label;
+  bt.onclick = () => { speed = i; markSpeed(); };
+  el('spd').appendChild(bt);
+});
+function markSpeed(){
+  [...el('spd').children].forEach((c,i) => c.classList.toggle('sel', i === speed));
+}
 
 /* ================= 操作 ================= */
 function apply(){
@@ -651,8 +641,7 @@ el('ar').onclick = () => setA(Math.round(a));
 el('hf').onclick = () => { stopAnim(); setH(-(b-a)); };
 
 function readNum(inp, cb, onZero){
-  const raw = inp.value.replace(/[^\d.+\-]/g,'');
-  const v = parseFloat(raw);
+  const v = parseFloat(inp.value.replace(/[^\d.+\-]/g,''));
   if (!isFinite(v)) { sync(); return; }
   if (onZero && v === 0){ onZero(); return; }
   cb(v);
@@ -678,13 +667,13 @@ el('rs').onclick = () => {
   stopAnim(); cur = {...PRE[0]}; el('expr').value = PRE[0].src;
   a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
   snapMode = 'mag'; el('snap').value = 'mag';
-  showTan = true; showBoth = false;
+  showTan = true; speed = 0;
   el('crd').checked = true; el('hlp').checked = true;
-  syncToggles(); view(); sync();
+  syncToggles(); markSpeed(); view(); sync();
 };
 
 function stopAnim(){
-  if (animId){ cancelAnimationFrame(animId); animId = null; el('anim').textContent = 'h を 0 に近づける'; }
+  if (animId){ cancelAnimationFrame(animId); animId = null; el('anim').textContent = '開始'; }
 }
 el('hr').oninput = e => {
   stopAnim();
@@ -696,8 +685,9 @@ el('anim').onclick = () => {
   if (animId){ stopAnim(); return; }
   if (Math.abs(b-a) < 0.02) b = a + (b < a ? -2.5 : 2.5);
   el('anim').textContent = '停止';
+  const k = SPEEDS[speed].k;
   const stepFn = () => {
-    b = a + (b-a)*0.93;
+    b = a + (b-a)*k;
     if (Math.abs(b-a) <= 0.001){
       b = a + (b < a ? -0.001 : 0.001); sync(); stopAnim(); return;
     }
@@ -706,28 +696,19 @@ el('anim').onclick = () => {
   animId = requestAnimationFrame(stepFn);
 };
 
-/* ---- トグル類 ---- */
+/* ---- ヘッダのトグル ---- */
 function syncToggles(){
   el('tgTan').classList.toggle('on', showTan);
   el('tgTan').textContent = showTan ? '接線を表示' : '接線を隠す';
-  el('tgBoth').classList.toggle('on', showBoth);
   el('lg1').style.borderTop = '3px solid ' + C.sec;
   el('lg2').style.borderTop = '3px dashed ' + C.tan;
   el('lg3').style.borderTop = '3px solid ' + C.curve;
 }
 el('tgTan').onclick = () => { showTan = !showTan; syncToggles(); draw(); };
-el('tgBoth').onclick = () => { showBoth = !showBoth; syncToggles(); draw(); };
 el('tgPanel').onclick = () => {
   const closed = el('main').classList.toggle('closed');
   el('tgPanel').textContent = closed ? 'パネルを出す' : 'パネルを隠す';
   requestAnimationFrame(() => resize(true));
-};
-el('tgTheme').onclick = () => {
-  theme = theme === 'dark' ? 'light' : 'dark';
-  C = THEME[theme];
-  document.documentElement.dataset.theme = theme;
-  el('tgTheme').textContent = theme === 'dark' ? '白い背景' : '暗い背景';
-  syncToggles(); draw();
 };
 const SIZES = [1, 1.3, 1.6], SIZE_LABEL = ['文字を大きく', '文字をもっと大きく', '文字を戻す'];
 el('tgSize').onclick = () => {
@@ -801,6 +782,7 @@ cv.addEventListener('wheel', e => {
 
 addEventListener('resize', () => resize(true));
 syncToggles();
+markSpeed();
 resize(false);
 </script>
 </body>
