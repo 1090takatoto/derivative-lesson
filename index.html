@@ -728,8 +728,10 @@ function syncToggles(){
   el('tgCrd').textContent = showCoord ? '座標を隠す' : '座標を表示';
   el('tgAux').classList.toggle('on', showAux);
   el('tgAux').textContent = showAux ? '補助線を隠す' : '補助線を表示';
+  // 他のトグルと同じく、ラベルは「押したときにどうなるか」を示す。
+  // 緑に光っている＝その機能がオン、という点も他と揃えている。
   el('tgSnap').classList.toggle('on', snapMode === 'mag');
-  el('tgSnap').textContent = snapMode === 'mag' ? '整数に止める' : '自由に動かす';
+  el('tgSnap').textContent = snapMode === 'mag' ? '自由に動かす' : '整数に止める';
   el('lg1').style.borderTop = '3px solid ' + C.sec;
   el('lg2').style.borderTop = '3px dashed ' + C.tan;
   el('lg3').style.borderTop = '3px solid ' + C.curve;
