@@ -60,6 +60,7 @@ canvas{width:100%;height:clamp(300px,72vh,880px);display:block;
   border:1px solid var(--edge);border-radius:8px;padding:calc(7px * var(--s)) calc(10px * var(--s));
   font-size:calc(12px * var(--s));pointer-events:none}
 .legend div{display:flex;align-items:center;gap:calc(7px * var(--s));white-space:nowrap}
+.legend div[hidden]{display:none}
 .legend i{width:calc(20px * var(--s));height:0;border-top-width:3px;display:inline-block;flex:0 0 auto}
 .legend b.dot{width:calc(11px * var(--s));height:calc(11px * var(--s));border-radius:50%;
   display:inline-block;flex:0 0 auto;margin-left:calc(4px * var(--s))}
@@ -174,9 +175,9 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <section class="stage">
     <canvas id="cv"></canvas>
     <div class="legend">
-      <div><i id="lg1"></i><span>割線（A と B を通る直線）</span></div>
-      <div><i id="lg2"></i><span>接線（A で接する直線）</span></div>
-      <div><i id="lg3"></i><span>y = f(x)</span></div>
+      <div><i id="lg1"></i><span>A と B を通る直線</span></div>
+      <div id="lg2row" hidden><i id="lg2"></i><span>接線（A で接する直線）</span></div>
+      <div><i id="lg3"></i><span id="lgFn">y = f(x)</span></div>
     </div>
   </section>
 
@@ -581,6 +582,7 @@ function sync(){
     : '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
   el('hr').value = Math.max(0, Math.min(1000,
     Math.round(1000*Math.log(Math.abs(h)/0.001)/Math.log(4000))));
+  syncLegend();
   message(fa, fb, h);
   draw();
 }
@@ -694,6 +696,11 @@ el('anim').onclick = () => {
 };
 
 /* ---- ヘッダのトグル ---- */
+function syncLegend(){
+  // 接線は表示しているときだけ凡例に出す（先に答えを見せないため）
+  el('lg2row').hidden = !showTan;
+  el('lgFn').textContent = 'y = ' + (cur.label || cur.src);
+}
 function syncToggles(){
   el('tgTan').classList.toggle('on', showTan);
   el('tgTan').textContent = showTan ? '接線を隠す' : '接線を表示する';
@@ -706,6 +713,7 @@ function syncToggles(){
   el('lg1').style.borderTop = '3px solid ' + C.sec;
   el('lg2').style.borderTop = '3px dashed ' + C.tan;
   el('lg3').style.borderTop = '3px solid ' + C.curve;
+  syncLegend();
 }
 el('tgTan').onclick = () => { showTan = !showTan; syncToggles(); draw(); };
 el('tgCrd').onclick = () => { showCoord = !showCoord; syncToggles(); draw(); };
