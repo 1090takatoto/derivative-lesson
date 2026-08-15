@@ -263,7 +263,7 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
         </div>
         <div class="two">
           <div class="ro tan"><div class="k">微分係数 f&prime;(a)</div><div class="v" id="d">-</div></div>
-          <div class="ro"><div class="k">差</div><div class="v" id="er">-</div></div>
+          <div class="ro"><div class="k">平均変化率と微分係数の差</div><div class="v" id="er">-</div></div>
         </div>
         <div class="msg" id="msg"></div>
       </div>
@@ -397,21 +397,6 @@ function rr(x,y,w,h,r){
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
   ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
 }
-function tag(px,py,txt,color,below){
-  const fs = 12.5 * FS();
-  ctx.font = 'bold ' + fs + 'px ui-monospace,SFMono-Regular,monospace';
-  const w = ctx.measureText(txt).width + fs, hh = fs + 9;
-  let lx = px + 14, ly = below ? py + 12 : py - (hh + 11);
-  if (lx + w > W-3) lx = px - 14 - w;
-  if (lx < 3) lx = 3;
-  if (ly < 3) ly = py + 12;
-  if (ly > H - hh - 2) ly = py - (hh + 11);
-  ctx.fillStyle = C.tagBg; rr(lx,ly,w,hh,5); ctx.fill();
-  ctx.strokeStyle = color; ctx.globalAlpha = .7; ctx.lineWidth = 1.2;
-  rr(lx,ly,w,hh,5); ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  ctx.fillText(txt, lx + fs/2, ly + hh/2);
-}
 function line(x0,y0,m){
   if (!isFinite(m)) return;
   ctx.beginPath();
@@ -440,30 +425,51 @@ function drawCurve(){
   }
   ctx.stroke();
 }
-/* 補助線の h と f(a+h)−f(a) のラベル。
-   座標タグより先に描くと隠れてしまうため、draw() の最後に呼ぶ。
-   下地を敷いて、グリッドや曲線と重なっても読めるようにする。 */
-function drawAuxLabels(fa, fb){
-  if (!showAux || atLimit || !defined(fa) || !defined(fb)) return;
-  const fs = 15 * FS();
+/* ------------------------------------------------------------------
+   ラベルの重なり回避。
+   座標タグと補助線のラベルは近い場所に出るため、そのまま描くと重なって
+   読めなくなる。描画前に位置を決め、既に置いた矩形と重なる候補は捨てる。
+------------------------------------------------------------------- */
+let placed = [];
+
+function hits(r, q){
+  const m = 2; // 余白。ぴったり隣接も避ける
+  return !(r.x + r.w + m < q.x || q.x + q.w + m < r.x ||
+           r.y + r.h + m < q.y || q.y + q.h + m < r.y);
+}
+/* 候補位置を優先順に試し、画面内に収まり既存と重ならない最初の場所を返す。
+   すべて駄目なら先頭の候補を画面内へ寄せて使う（読めないよりはまし）。 */
+function place(cands, w, h){
+  for (const c of cands){
+    const r = {x:c.x, y:c.y, w, h};
+    if (r.x < 3 || r.x + w > W-3 || r.y < 3 || r.y + h > H-3) continue;
+    if (!placed.some(q => hits(r, q))) { placed.push(r); return r; }
+  }
+  const c = cands[0];
+  const r = {x:Math.max(3, Math.min(W-w-3, c.x)), y:Math.max(3, Math.min(H-h-3, c.y)), w, h};
+  placed.push(r); return r;
+}
+/* 点のまわりの4隅を候補にする。preferBelow で下側を優先するか決める。 */
+function aroundPoint(px, py, w, h, preferBelow){
+  const g = 13;
+  const below = [{x:px+g, y:py+g}, {x:px-g-w, y:py+g}, {x:px+g, y:py-g-h}, {x:px-g-w, y:py-g-h}];
+  const above = [{x:px+g, y:py-g-h}, {x:px-g-w, y:py-g-h}, {x:px+g, y:py+g}, {x:px-g-w, y:py+g}];
+  return preferBelow ? below : above;
+}
+
+function drawTagBox(r, txt, color, fs){
+  ctx.fillStyle = C.tagBg; rr(r.x, r.y, r.w, r.h, 5); ctx.fill();
+  ctx.strokeStyle = color; ctx.globalAlpha = .7; ctx.lineWidth = 1.2;
+  rr(r.x, r.y, r.w, r.h, 5); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = 'bold ' + fs + 'px ui-monospace,SFMono-Regular,monospace';
+  ctx.fillText(txt, r.x + fs/2, r.y + r.h/2);
+}
+function drawAuxBox(r, txt, fs){
+  ctx.fillStyle = 'rgba(255,255,255,.88)'; rr(r.x, r.y, r.w, r.h, 4); ctx.fill();
+  ctx.fillStyle = C.auxTx; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.font = 'bold ' + fs + 'px sans-serif';
-  ctx.textBaseline = 'middle';
-  const put = (txt, cx, cy, align) => {
-    const w = ctx.measureText(txt).width;
-    const x0 = align === 'center' ? cx - w/2 : (align === 'left' ? cx : cx - w);
-    ctx.fillStyle = 'rgba(255,255,255,.88)';
-    rr(x0 - 5, cy - fs*0.72, w + 10, fs*1.44, 4); ctx.fill();
-    ctx.fillStyle = C.auxTx; ctx.textAlign = align;
-    ctx.fillText(txt, cx, cy);
-  };
-  if (Math.abs(X(b)-X(a)) > 26){
-    put('h', (X(a)+X(b))/2, Y(fa) + (fb > fa ? fs : -fs), 'center');
-  }
-  if (Math.abs(Y(fb)-Y(fa)) > 44){
-    const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
-    const toRight = X(b) + 12 + tw < W - 4;
-    put(tx, X(b) + (toRight ? 12 : -12), (Y(fa)+Y(fb))/2, toRight ? 'left' : 'right');
-  }
+  ctx.fillText(txt, r.x + 5, r.y + r.h/2);
 }
 
 function draw(){
@@ -524,9 +530,43 @@ function draw(){
     ctx.strokeStyle = C.ring; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(X(a), Y(fa), 14, 0, 7); ctx.stroke();
   }
+  // ---- ラベル類は位置を先に確定させてから描く（重なり回避のため） ----
+  placed = [];
+  const boxes = [];
+
+  // 補助線のラベルを先に確保する。線に沿った位置しか取れず自由度が低いため。
+  if (showAux && !atLimit && defined(fa) && defined(fb)){
+    const afs = 15 * FS();
+    ctx.font = 'bold ' + afs + 'px sans-serif';
+    const bh = afs * 1.44;
+    if (Math.abs(X(b)-X(a)) > 26){
+      const w = ctx.measureText('h').width + 10;
+      const cx = (X(a)+X(b))/2 - w/2, base = Y(fa), d = fb > fa ? 1 : -1;
+      const r = place([{x:cx, y:base + d*6}, {x:cx, y:base - d*6 - bh},
+                       {x:cx, y:base + d*(6 + bh)}], w, bh);
+      boxes.push({r, txt:'h', fs:afs, aux:true});
+    }
+    if (Math.abs(Y(fb)-Y(fa)) > 44){
+      const tx = 'f(a+h)−f(a)', w = ctx.measureText(tx).width + 10;
+      const cy = (Y(fa)+Y(fb))/2 - bh/2;
+      const r = place([{x:X(b)+12, y:cy}, {x:X(b)-12-w, y:cy},
+                       {x:X(b)+12, y:cy - bh - 4}], w, bh);
+      boxes.push({r, txt:tx, fs:afs, aux:true});
+    }
+  }
+
   if (showCoord){
-    if (!atLimit && defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
-    if (defined(fa)) tag(X(a), Y(fa), 'A (' + fmt(a) + ', ' + fmt(fa) + ')', C.A, true);
+    const tfs = 12.5 * FS();
+    ctx.font = 'bold ' + tfs + 'px ui-monospace,SFMono-Regular,monospace';
+    const th = tfs + 9;
+    if (!atLimit && defined(fb)){
+      const txt = 'B (' + fmt(b) + ', ' + fmt(fb) + ')', w = ctx.measureText(txt).width + tfs;
+      boxes.push({r:place(aroundPoint(X(b), Y(fb), w, th, false), w, th), txt, fs:tfs, color:C.B});
+    }
+    if (defined(fa)){
+      const txt = 'A (' + fmt(a) + ', ' + fmt(fa) + ')', w = ctx.measureText(txt).width + tfs;
+      boxes.push({r:place(aroundPoint(X(a), Y(fa), w, th, true), w, th), txt, fs:tfs, color:C.A});
+    }
   } else {
     ctx.font = 'bold ' + (14*FS()) + 'px sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
@@ -534,7 +574,10 @@ function draw(){
     if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
   }
 
-  drawAuxLabels(fa, fb);
+  for (const bx of boxes){
+    if (bx.aux) drawAuxBox(bx.r, bx.txt, bx.fs);
+    else drawTagBox(bx.r, bx.txt, bx.color, bx.fs);
+  }
 }
 
 /* ================= 状態の同期 ================= */
