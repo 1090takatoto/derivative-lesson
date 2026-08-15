@@ -217,7 +217,6 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
             <button data-as="0">A を x = 0 へ</button>
             <button data-as="1">A を x = 1 へ</button>
             <button data-as="2">A を x = 2 へ</button>
-            <button id="ar">整数に丸める</button>
           </div>
           <div class="row" style="margin-top:calc(12px * var(--s))">
             <span class="lbl">A の x 座標</span>
@@ -234,13 +233,13 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
       <div class="body">
         <div class="grp pb">
           <div class="chips warm" id="hchips"></div>
-          <div class="row" style="margin-top:calc(10px * var(--s))">
-            <span class="lbl">小さい</span>
+          <div class="row" style="margin-top:calc(12px * var(--s))">
+            <span class="lbl">A に近づける</span>
             <input id="hr" type="range" min="0" max="1000" value="850">
-            <span class="lbl">大きい</span>
+            <span class="lbl">遠ざける</span>
           </div>
           <div class="row">
-            <span class="lbl">A からのずれ h</span>
+            <span class="lbl">B の x 座標</span>
             <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
           </div>
           <div class="eq">点 B の座標 &nbsp; ( <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
@@ -252,7 +251,6 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
     <details class="sec" open>
       <summary>h を 0 に近づける</summary>
       <div class="body">
-        <p class="note" style="margin-top:0">B が A に重なるまで動かします。最後は割線が接線とぴったり一致します。</p>
         <div class="row">
           <span class="lbl">速さ</span>
           <span class="chips" id="spd" style="margin:0"></span>
@@ -407,6 +405,8 @@ function setH(v){
   if (Math.abs(v) < 0.001) v = (v < 0 ? -0.001 : 0.001);
   b = r3(a+v); sync();
 }
+// 点 B は絶対座標で指定する（点 A と同じ操作感にするため）
+function setB(v){ setH(r3(v) - a); }
 
 /* ================= 描画 ================= */
 function gridStep(){
@@ -544,16 +544,19 @@ function draw(){
 function clampH(){
   const h = b-a;
   if (Math.abs(h) < 0.001) b = a + (h < 0 ? -0.001 : 0.001);
-  b = r3(b); a = r3(a);
+  a = r3(a);
+  // アニメーション中は b を 0.001 刻みに丸めない。
+  // 丸めると1ステップの減少量が丸め幅に飲まれ、h が 0.02 付近で停滞して
+  // 終了条件（h <= 0.001）に永久に到達しなくなる。
+  if (!animId) b = r3(b);
 }
 function markChip(){
   const s = norm(el('expr').value);
   [...el('chips').children].forEach((c,i) => c.classList.toggle('sel', PRE[i].src === s));
 }
 function markH(){
-  const h = Math.abs(b-a);
   [...el('hchips').children].forEach(c =>
-    c.classList.toggle('sel', Math.abs(parseFloat(c.dataset.h)-h) < 1e-9));
+    c.classList.toggle('sel', Math.abs(parseFloat(c.dataset.bx) - b) < 1e-9));
 }
 function message(fa, fb, h){
   const box = el('msg');
@@ -590,7 +593,7 @@ function sync(){
   const fa = cur.f(a), fb = cur.f(b), h = b-a, m = (fb-fa)/h, m0 = der(a);
   const ae = document.activeElement;
   if (ae !== el('ia')) el('ia').value = nf(a);
-  if (ae !== el('ih')) el('ih').value = nf(h);
+  if (ae !== el('ih')) el('ih').value = nf(b);
   el('eqa').textContent = fmt(a);   el('eqfa').textContent = fmt(fa);
   el('eqb').textContent = atLimit ? fmt(a) : fmt(b);
   el('eqfb').textContent = atLimit ? fmt(fa) : fmt(fb);
@@ -613,15 +616,15 @@ PRE.forEach(p => {
   bt.onclick = () => { atLimit = false; cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
   el('chips').appendChild(bt);
 });
-[2,1,0.5].forEach(v => {
+[0,2,3].forEach(v => {
   const bt = document.createElement('button');
-  bt.textContent = 'h = ' + v; bt.dataset.h = v;
+  bt.textContent = 'B を x = ' + v + ' へ'; bt.dataset.bx = v;
   el('hchips').appendChild(bt);
 });
 el('hchips').onclick = e => {
-  const v = e.target.dataset.h;
+  const v = e.target.dataset.bx;
   if (v === undefined) return;
-  stopAnim(); setH((b < a ? -1 : 1) * parseFloat(v));
+  stopAnim(); setB(parseFloat(v));
 };
 SPEEDS.forEach((s,i) => {
   const bt = document.createElement('button');
@@ -658,7 +661,6 @@ el('snap').onchange = e => {
 };
 document.querySelectorAll('[data-a]').forEach(bt => bt.onclick = () => setA(a + parseFloat(bt.dataset.a)));
 document.querySelectorAll('[data-as]').forEach(bt => bt.onclick = () => setA(parseFloat(bt.dataset.as)));
-el('ar').onclick = () => setA(Math.round(a));
 
 function readNum(inp, cb, onZero){
   const v = parseFloat(inp.value.replace(/[^\d.+\-]/g,''));
@@ -669,13 +671,17 @@ function readNum(inp, cb, onZero){
 el('ia').addEventListener('change', () => readNum(el('ia'), setA));
 el('ih').addEventListener('change', () => {
   stopAnim();
-  readNum(el('ih'), setH, () => {
-    // h = 0 は「入れさせて、なぜ駄目かを示す」。ここが授業の要点になる。
+  const v = parseFloat(el('ih').value.replace(/[^\d.+\-]/g, ''));
+  if (!isFinite(v)) { sync(); return; }
+  if (Math.abs(v - a) < 1e-9){
+    // B を A に重ねようとした＝h が 0。ここが授業の要点なので、黙って直さず理由を示す。
     sync();
     el('msg').className = 'msg warn';
-    el('msg').textContent = 'h = 0 にすると分母が 0 になり、平均変化率を計算できません。'
+    el('msg').textContent = 'B を A と同じ位置に置くと h = 0 になり、分母が 0 になって平均変化率を計算できません。'
       + 'だからこそ h を 0 そのものにはせず、限りなく 0 に近づけます。これが極限の考え方です。';
-  });
+    return;
+  }
+  setB(v);
 });
 [el('ia'), el('ih')].forEach(i => i.addEventListener('keydown', e => {
   if (e.key === 'Enter'){ e.preventDefault(); i.blur(); }
