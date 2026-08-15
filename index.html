@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>微分係数 ― 平均変化率から接線の傾きへ</title>
+<style>
+/* ------------------------------------------------------------------
+   配色はテーマごとに CSS 変数で持つ。canvas の描画色も JS 側の THEME と
+   対応させているため、片方だけ変えると食い違うので注意。
+   --s は文字サイズの倍率。投影時に 1.3 / 1.6 へ上げて後方の席から読ませる。
+------------------------------------------------------------------- */
+:root{
+  --s:1;
+  --bg:#0f1216; --panel:#151b24; --card:#171d27; --edge:#242e3c;
+  --fg:#e8edf3; --sub:#8b98a8; --muted:#5d6a7d;
+  --a:#4da3ff; --b:#ff9f43; --t:#3ddc84; --err:#ff7b72;
+  --btn:#1d2531; --btn-edge:#2c3646;
+}
+html[data-theme="light"]{
+  --bg:#ffffff; --panel:#f4f6f9; --card:#eef1f6; --edge:#d3dae4;
+  --fg:#12181f; --sub:#5a6675; --muted:#8a95a3;
+  --a:#0b62c4; --b:#c2560a; --t:#0f7a3d; --err:#c02a1f;
+  --btn:#ffffff; --btn-edge:#c3ccd8;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP",sans-serif;
+  font-size:calc(15px * var(--s));line-height:1.5}
+
+/* ---------- ヘッダ ---------- */
+.bar{display:flex;align-items:center;gap:calc(14px * var(--s));flex-wrap:wrap;
+  padding:calc(10px * var(--s)) calc(14px * var(--s));border-bottom:1px solid var(--edge);
+  background:var(--panel)}
+h1{font-size:calc(17px * var(--s));margin:0;white-space:nowrap;font-weight:700}
+.tools{display:flex;gap:calc(7px * var(--s));margin-left:auto;flex-wrap:wrap}
+
+/* 定義式。分数は必ず縦に組む。横並びだと f(a) を h で割ると誤読される。 */
+.def{display:flex;align-items:center;gap:calc(7px * var(--s));
+  font-size:calc(15px * var(--s));white-space:nowrap}
+.lim{display:inline-grid;justify-items:center;line-height:1.05}
+.lim .lo{font-size:calc(10px * var(--s));color:var(--sub)}
+.frac{display:inline-grid;justify-items:center;line-height:1.25;vertical-align:middle}
+.frac .nu{padding:0 calc(6px * var(--s))}
+.frac .de{padding:0 calc(6px * var(--s));border-top:1.5px solid currentColor;
+  margin-top:calc(2px * var(--s))}
+
+/* ---------- レイアウト ---------- */
+main{display:grid;grid-template-columns:1fr calc(360px * var(--s));
+  gap:calc(12px * var(--s));padding:calc(12px * var(--s));align-items:start}
+main.closed{grid-template-columns:1fr}
+main.closed aside{display:none}
+@media (max-width:860px){
+  main{grid-template-columns:1fr}
+  aside{order:2}
+}
+
+/* ---------- グラフ側 ---------- */
+.stage{min-width:0}
+.cvbox{position:relative}
+canvas{width:100%;height:clamp(260px,56vh,760px);display:block;
+  background:var(--panel);border:1px solid var(--edge);border-radius:12px;touch-action:none}
+.legend{position:absolute;left:calc(10px * var(--s));top:calc(10px * var(--s));
+  display:flex;flex-direction:column;gap:calc(4px * var(--s));
+  background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--edge);border-radius:8px;padding:calc(6px * var(--s)) calc(9px * var(--s));
+  font-size:calc(11.5px * var(--s));pointer-events:none}
+.legend div{display:flex;align-items:center;gap:calc(6px * var(--s));white-space:nowrap}
+.legend i{width:calc(18px * var(--s));height:0;border-top-width:3px;display:inline-block}
+
+/* 主要な数値はグラフ直下。授業中にスクロールせず見せられる位置に置く。 */
+.readout{display:grid;grid-template-columns:2fr 1fr 1fr;gap:calc(8px * var(--s));
+  margin-top:calc(10px * var(--s))}
+@media (max-width:620px){.readout{grid-template-columns:1fr}}
+.ro{background:var(--card);border:1px solid var(--edge);border-radius:10px;
+  padding:calc(8px * var(--s)) calc(11px * var(--s));min-width:0}
+.ro .k{font-size:calc(11.5px * var(--s));color:var(--sub);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.ro .v{font-size:calc(26px * var(--s));font-variant-numeric:tabular-nums;
+  font-weight:700;margin-top:calc(1px * var(--s));white-space:nowrap}
+.ro.main{border-color:var(--a)}.ro.main .v{color:var(--a)}
+.ro.tan .v{color:var(--t)}
+.ro .sub{font-size:calc(12px * var(--s));color:var(--sub);
+  font-family:ui-monospace,monospace;white-space:nowrap;overflow-x:auto}
+.msg{font-size:calc(13px * var(--s));color:var(--t);min-height:calc(38px * var(--s));
+  line-height:1.5;margin-top:calc(8px * var(--s))}
+.msg.err{color:var(--err)}
+.msg.warn{color:var(--b)}
+
+/* ---------- サイドパネル ---------- */
+aside{min-width:0;max-height:calc(100vh - 90px);overflow-y:auto;
+  padding-right:calc(2px * var(--s))}
+@media (max-width:860px){aside{max-height:none}}
+.sec{background:var(--panel);border:1px solid var(--edge);border-radius:12px;
+  margin-bottom:calc(10px * var(--s));overflow:hidden}
+.sec>summary{cursor:pointer;list-style:none;padding:calc(9px * var(--s)) calc(12px * var(--s));
+  font-size:calc(12.5px * var(--s));font-weight:700;color:var(--t);
+  display:flex;align-items:center;gap:calc(7px * var(--s));user-select:none}
+.sec>summary::-webkit-details-marker{display:none}
+.sec>summary::before{content:"▸";transition:transform .15s;font-size:calc(11px * var(--s))}
+.sec[open]>summary::before{transform:rotate(90deg)}
+.sec .body{padding:0 calc(12px * var(--s)) calc(12px * var(--s))}
+
+.row{display:flex;align-items:center;gap:calc(7px * var(--s));margin:calc(8px * var(--s)) 0}
+.row:first-child{margin-top:0}
+.lbl{font-size:calc(12px * var(--s));color:var(--sub);min-width:calc(30px * var(--s))}
+select,button,input[type=text]{background:var(--btn);color:var(--fg);
+  border:1px solid var(--btn-edge);border-radius:9px;
+  padding:calc(8px * var(--s)) calc(11px * var(--s));font-size:calc(13.5px * var(--s));
+  min-width:0;font-family:inherit}
+button{cursor:pointer}
+button:hover{border-color:var(--a)}
+select{flex:1}
+input[type=text]{flex:1;font-family:ui-monospace,monospace}
+input.num{flex:0 1 calc(92px * var(--s));text-align:center;font-variant-numeric:tabular-nums}
+input[type=range]{flex:1;accent-color:var(--b)}
+button.primary{background:var(--a);color:#fff;border-color:var(--a);font-weight:700}
+html[data-theme="light"] button.primary{color:#fff}
+button.on{background:var(--t);color:#04210f;border-color:var(--t);font-weight:700}
+html[data-theme="light"] button.on{color:#fff}
+button.sm{padding:calc(7px * var(--s)) calc(10px * var(--s));font-size:calc(12.5px * var(--s))}
+.chips{display:flex;flex-wrap:wrap;gap:calc(5px * var(--s));margin-top:calc(7px * var(--s))}
+.chips button{padding:calc(5px * var(--s)) calc(10px * var(--s));
+  font-size:calc(12px * var(--s));border-radius:20px}
+.chips button.sel{background:var(--a);color:#fff;border-color:var(--a);font-weight:700}
+.chips.warm button.sel{background:var(--b);color:#fff;border-color:var(--b)}
+.hint{font-size:calc(11.5px * var(--s));color:var(--sub);margin:calc(8px * var(--s)) 0 0;line-height:1.6}
+
+/* 収束表。h を小さくすると平均変化率が一定値に近づくことを数値で示す。 */
+table.conv{width:100%;border-collapse:collapse;font-size:calc(12.5px * var(--s));
+  font-variant-numeric:tabular-nums;margin-top:calc(2px * var(--s))}
+table.conv th{color:var(--sub);font-size:calc(11px * var(--s));font-weight:600;
+  text-align:right;padding:calc(3px * var(--s)) calc(5px * var(--s));
+  border-bottom:1px solid var(--edge)}
+table.conv td{text-align:right;padding:calc(4px * var(--s)) calc(5px * var(--s));
+  border-bottom:1px solid color-mix(in srgb,var(--edge) 50%,transparent)}
+table.conv tr.cur td{background:color-mix(in srgb,var(--a) 18%,transparent);font-weight:700}
+table.conv td.m{color:var(--a)}
+table.conv .goal td{border-top:2px solid var(--t);border-bottom:none;color:var(--t);font-weight:700}
+label.ck{font-size:calc(12.5px * var(--s));color:var(--sub);display:flex;
+  align-items:center;gap:calc(6px * var(--s));cursor:pointer}
+code{background:var(--card);padding:1px calc(5px * var(--s));border-radius:4px;
+  font-size:calc(11.5px * var(--s))}
+kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
+  border-radius:4px;padding:0 calc(5px * var(--s));font-size:calc(11px * var(--s));
+  font-family:inherit}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1>微分係数</h1>
+  <div class="def">
+    <span>f&prime;(a) =</span>
+    <span class="lim"><span>lim</span><span class="lo">h&rarr;0</span></span>
+    <span class="frac"><span class="nu">f(a+h) &minus; f(a)</span><span class="de">h</span></span>
+  </div>
+  <div class="tools">
+    <button id="tgTan" class="on">接線を表示</button>
+    <button id="tgBoth" class="sm">左右から近づける</button>
+    <button id="tgPanel" class="sm">パネルを隠す</button>
+    <button id="tgTheme" class="sm">白い背景</button>
+    <button id="tgSize" class="sm">文字を大きく</button>
+  </div>
+</header>
+
+<main id="main">
+  <section class="stage">
+    <div class="cvbox">
+      <canvas id="cv"></canvas>
+      <div class="legend">
+        <div><i id="lg1"></i><span>割線（2点 A, B を通る直線）</span></div>
+        <div><i id="lg2"></i><span>接線（点 A で接する直線）</span></div>
+        <div><i id="lg3"></i><span>y = f(x)</span></div>
+      </div>
+    </div>
+
+    <div class="readout">
+      <div class="ro main">
+        <div class="k">平均変化率 ＝ ( f(a+h) &minus; f(a) ) &divide; h</div>
+        <div class="v" id="m">-</div>
+        <div class="sub" id="fx">-</div>
+      </div>
+      <div class="ro tan">
+        <div class="k">微分係数 f&prime;(a)</div>
+        <div class="v" id="d">-</div>
+      </div>
+      <div class="ro">
+        <div class="k">差（平均変化率 &minus; f&prime;(a)）</div>
+        <div class="v" id="er">-</div>
+      </div>
+    </div>
+
+    <div class="msg" id="msg"></div>
+  </section>
+
+  <aside id="side">
+
+    <details class="sec" open>
+      <summary>点を動かす</summary>
+      <div class="body">
+        <div class="row">
+          <span class="lbl" style="color:var(--a);font-weight:700">a =</span>
+          <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
+          <button class="sm" data-a="-1">&minus;1</button>
+          <button class="sm" data-a="-0.1">&minus;0.1</button>
+          <button class="sm" data-a="0.1">+0.1</button>
+          <button class="sm" data-a="1">+1</button>
+        </div>
+        <div class="chips">
+          <button id="ar">整数に丸める</button>
+          <button data-as="0">a = 0</button>
+          <button data-as="1">a = 1</button>
+          <button data-as="2">a = 2</button>
+        </div>
+
+        <div class="row" style="margin-top:calc(14px * var(--s))">
+          <span class="lbl" style="color:var(--b);font-weight:700">h =</span>
+          <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
+          <button id="hf" class="sm">符号を反転</button>
+        </div>
+        <div class="chips warm" id="hchips"></div>
+
+        <div class="row" style="margin-top:calc(12px * var(--s))">
+          <span class="lbl" style="min-width:calc(64px * var(--s))">h を拡大</span>
+          <input id="hr" type="range" min="0" max="1000" value="850">
+        </div>
+        <div class="row">
+          <button id="anim" class="primary" style="flex:1">h を 0 に近づける</button>
+        </div>
+        <p class="hint">スライダーは右へ動かすほど h が大きくなります。</p>
+      </div>
+    </details>
+
+    <details class="sec" open>
+      <summary>h を小さくしたときの平均変化率</summary>
+      <div class="body">
+        <table class="conv">
+          <thead><tr><th style="text-align:left">h</th><th>a+h</th><th>平均変化率</th></tr></thead>
+          <tbody id="convb"></tbody>
+        </table>
+        <p class="hint">h を 0 に近づけると、平均変化率が一定の値に近づきます。その行き先が微分係数 f&prime;(a) です。</p>
+      </div>
+    </details>
+
+    <details class="sec">
+      <summary>関数を変える</summary>
+      <div class="body">
+        <div class="row">
+          <span class="lbl" style="min-width:calc(44px * var(--s))">f(x) =</span>
+          <input id="expr" type="text" value="x^2" spellcheck="false" autocapitalize="off">
+          <button id="ap" class="sm primary">適用</button>
+        </div>
+        <div class="chips" id="chips"></div>
+        <p class="hint">入力例：<code>x^2</code> <code>sin(x)</code> <code>x^3/8-x</code>
+          <code>sqrt(x)</code> <code>1/x</code> <code>exp(x)</code> <code>log(x)</code><br>
+          <code>log</code> は自然対数（底 e）です。</p>
+      </div>
+    </details>
+
+    <details class="sec">
+      <summary>細かい設定</summary>
+      <div class="body">
+        <div class="row">
+          <span class="lbl" style="min-width:calc(40px * var(--s))">吸着</span>
+          <select id="snap">
+            <option value="mag">整数に吸い付く（おすすめ）</option>
+            <option value="int">整数のみ</option>
+            <option value="ten">0.1 刻み</option>
+            <option value="free">自由（0.001 刻み）</option>
+          </select>
+        </div>
+        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に座標を表示</label></div>
+        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線</label></div>
+        <div class="row">
+          <button id="rv" class="sm" style="flex:1">表示位置を戻す</button>
+          <button id="rs" class="sm" style="flex:1">すべて初期化</button>
+        </div>
+        <p class="hint">
+          点 A・B はドラッグで移動、背景ドラッグで平行移動、ホイールとピンチで拡大縮小。<br>
+          <kbd>&larr;</kbd><kbd>&rarr;</kbd> で a を 0.1 ずつ（<kbd>Shift</kbd>で1、<kbd>Alt</kbd>で0.001）、
+          <kbd>T</kbd> 接線、<kbd>Space</kbd> アニメーション、<kbd>P</kbd> パネル開閉。
+        </p>
+      </div>
+    </details>
+
+  </aside>
+</main>
+
+<script>
+"use strict";
+const el = i => document.getElementById(i);
+const cv = el('cv'), ctx = cv.getContext('2d');
+
+/* canvas 内は CSS 変数を使えないので、テーマ色をここで持つ。
+   :root の定義と対応させること。 */
+const THEME = {
+  dark:  {grid:'#1d2532', axis:'#3a465c', tick:'#7e8b9c', curve:'#8494a8',
+          sec:'#4da3ff', tan:'#3ddc84', aux:'#5d6a7d', auxTx:'#94a2b4',
+          A:'#4da3ff', B:'#ff9f43', tagBg:'rgba(12,15,20,.88)', ring:'rgba(232,237,243,.85)'},
+  light: {grid:'#e3e8ef', axis:'#9aa7b6', tick:'#5a6675', curve:'#46536a',
+          sec:'#0b62c4', tan:'#0f7a3d', aux:'#9aa7b6', auxTx:'#5a6675',
+          A:'#0b62c4', B:'#c2560a', tagBg:'rgba(255,255,255,.92)', ring:'rgba(18,24,31,.75)'}
+};
+let theme = 'dark', C = THEME.dark;
+
+/* ---- プリセット関数。cx,cy は表示の中心、spanX/spanY は最低限見せたい範囲 ---- */
+const PRE = [
+  {src:'x^2',     label:'x²',  f:x=>x*x,          d:x=>2*x,            cx:0,  cy:3.2, spanX:9, spanY:9,  a:1, h:2},
+  {src:'sin(x)',  label:'sin x',    f:x=>Math.sin(x),  d:x=>Math.cos(x),    cx:0,  cy:0,   spanX:10,spanY:6,  a:1, h:2},
+  {src:'x^3/8-x', label:'x³/8−x', f:x=>x*x*x/8-x, d:x=>3*x*x/8-1, cx:0,  cy:0,   spanX:10,spanY:8,  a:1, h:2},
+  {src:'sqrt(x)', label:'√x',  f:x=>Math.sqrt(x), d:x=>0.5/Math.sqrt(x),cx:2.5,cy:1,  spanX:8, spanY:6,  a:1, h:3},
+  {src:'1/x',     label:'1/x',      f:x=>1/x,          d:x=>-1/(x*x),       cx:0,  cy:0,   spanX:9, spanY:9,  a:1, h:2},
+  {src:'exp(x)',  label:'eˣ',  f:x=>Math.exp(x),  d:x=>Math.exp(x),    cx:0,  cy:3,   spanX:9, spanY:9,  a:1, h:2}
+];
+
+let cur = {...PRE[0]}, a = 1, b = 3;
+let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
+let animId = null, drag = null, snapMode = 'mag', showTan = true, showBoth = false, sizeStep = 0;
+
+const X = x => ox + x*scale, Y = y => oy - y*scale;
+const iX = p => (p-ox)/scale, iY = p => (oy-p)/scale;
+const r3 = v => Math.round(v*1000)/1000;
+const fmt = v => (!isFinite(v) ? '—' : (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3));
+const nf = v => String(r3(v));
+const norm = s => String(s).toLowerCase().replace(/\s+/g,'');
+const isInt = v => Math.abs(v - Math.round(v)) < 1e-9;
+const defined = v => typeof v === 'number' && isFinite(v);
+
+/* ================= 式のパース =================
+   new Function に渡す前に識別子をホワイトリストで検査する。
+   文字種チェックだけでは alert(1) や document.cookie が通ってしまうため。 */
+const FUNCS = ['sin','cos','tan','asin','acos','atan','sinh','cosh','tanh',
+  'sqrt','cbrt','abs','exp','log','log2','log10','sign','floor','ceil','round','pow','min','max'];
+const ALLOWED = new Set([...FUNCS, 'x', 'pi', 'e']);
+
+function compile(src){
+  const s = norm(src);
+  if (!s) throw new Error('式が空です');
+  if (!/^[0-9x+\-*/^().,a-z]+$/.test(s)) throw new Error('使えない文字が含まれています');
+  for (const id of (s.match(/[a-z][a-z0-9]*/g) || [])) {
+    if (!ALLOWED.has(id)) throw new Error('使えない記号です：' + id);
+  }
+  const body = s.replace(/\^/g,'**')
+    .replace(new RegExp('\\b(' + FUNCS.join('|') + ')\\b','g'), 'Math.$1')
+    .replace(/\bpi\b/g,'Math.PI').replace(/\be\b/g,'Math.E');
+  const f = new Function('x', 'return (' + body + ');');
+  if (typeof f(0.7137) !== 'number') throw new Error('数値になりません');
+  return f;
+}
+function der(x){
+  if (cur.d) return cur.d(x);
+  const e = 1e-5;
+  return (cur.f(x+e) - cur.f(x-e)) / (2*e);
+}
+
+/* ================= 表示範囲 ================= */
+function view(){
+  // x 方向・y 方向とも最低限の範囲が入るように倍率を決める。
+  // x と y で同じ scale を使うので、傾きが見た目のまま正しく見える。
+  scale = Math.min(W / cur.spanX, H / cur.spanY);
+  ox = W/2 - cur.cx*scale;
+  oy = H/2 + cur.cy*scale;
+}
+function resize(keep){
+  const dpr = Math.min(devicePixelRatio || 1, 2), r = cv.getBoundingClientRect();
+  W = r.width; H = r.height;
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  if (!keep) view();
+  sync();
+}
+
+/* ================= 吸着 ================= */
+function snapX(x){
+  if (snapMode === 'int') return Math.round(x);
+  if (snapMode === 'ten') return Math.round(x*10)/10;
+  if (snapMode === 'free') return r3(x);
+  const n = Math.round(x);
+  if (Math.abs(x-n)*scale < 11) return n;
+  const t = Math.round(x*10)/10;
+  if (Math.abs(x-t)*scale < 6) return r3(t);
+  return r3(x);
+}
+function setA(v){ const h = b-a; a = r3(v); b = r3(a+h); sync(); }
+function setH(v){
+  if (Math.abs(v) < 0.001) v = (v < 0 ? -0.001 : 0.001);
+  b = r3(a+v); sync();
+}
+
+/* ================= 描画 ================= */
+function gridStep(){
+  const S=[0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1,2,5,10,20,50,100];
+  for (const s of S) if (s*scale >= 34) return s;
+  return 200;
+}
+function lab(v,s){ return s < 1 ? v.toFixed(String(s).split('.')[1].length) : String(Math.round(v)); }
+function rr(x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+function tag(px,py,txt,color,below){
+  const fs = 12 * FS();
+  ctx.font = 'bold ' + fs + 'px ui-monospace,SFMono-Regular,monospace';
+  const w = ctx.measureText(txt).width + fs, hh = fs + 8;
+  let lx = px + 14, ly = below ? py + 12 : py - (hh + 11);
+  if (lx + w > W-3) lx = px - 14 - w;
+  if (lx < 3) lx = 3;
+  if (ly < 3) ly = py + 12;
+  if (ly > H - hh - 2) ly = py - (hh + 11);
+  ctx.fillStyle = C.tagBg; rr(lx,ly,w,hh,5); ctx.fill();
+  ctx.strokeStyle = color; ctx.globalAlpha = .6; ctx.lineWidth = 1;
+  rr(lx,ly,w,hh,5); ctx.stroke(); ctx.globalAlpha = 1;
+  ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(txt, lx + fs/2, ly + hh/2);
+}
+function line(x0,y0,m){
+  if (!isFinite(m)) return;
+  ctx.beginPath();
+  ctx.moveTo(0, Y(y0 + m*(iX(0)-x0)));
+  ctx.lineTo(W, Y(y0 + m*(iX(W)-x0)));
+  ctx.stroke();
+}
+function pt(px,py,c,halo){
+  if (!isFinite(px) || !isFinite(py)) return;
+  if (halo){ ctx.fillStyle = c + '33'; ctx.beginPath(); ctx.arc(px,py,20,0,7); ctx.fill(); }
+  ctx.fillStyle = c; ctx.strokeStyle = getComputedStyle(document.body).backgroundColor;
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(px,py,8,0,7); ctx.fill(); ctx.stroke();
+}
+const FS = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--s')) || 1;
+
+function drawCurve(){
+  ctx.strokeStyle = C.curve; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  let prev = null;
+  for (let px = 0; px <= W; px += 1.5){
+    const y = cur.f(iX(px));
+    if (!defined(y)) { prev = null; continue; }
+    const py = Y(y);
+    // 1/x のような不連続点で左右が繋がり、存在しない漸近線が描かれるのを防ぐ。
+    // 隣り合う点が画面高さの2倍以上跳んだら別の枝とみなして線を切る。
+    if (prev !== null && Math.abs(py - prev) > H*2) prev = null;
+    if (prev === null) ctx.moveTo(px,py); else ctx.lineTo(px,py);
+    prev = py;
+  }
+  ctx.stroke();
+}
+function drawSecant(bx, color){
+  const fa = cur.f(a), fb = cur.f(bx), m = (fb-fa)/(bx-a);
+  if (!defined(fa) || !defined(fb)) return;
+  ctx.strokeStyle = color; ctx.lineWidth = 3; line(a, fa, m);
+  if (el('hlp').checked){
+    ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(bx),Y(fa)); ctx.lineTo(X(bx),Y(fb));
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = C.auxTx; ctx.font = (12*FS()) + 'px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    if (Math.abs(X(bx)-X(a)) > 22) ctx.fillText('h', (X(a)+X(bx))/2, Y(fa) + (fb>fa ? 16 : -7));
+    if (Math.abs(Y(fb)-Y(fa)) > 34){
+      ctx.font = (11.5*FS()) + 'px sans-serif';
+      const tx = 'f(a+h)−f(a)', tw = ctx.measureText(tx).width;
+      ctx.textAlign = (X(bx)+8+tw > W-4) ? 'right' : 'left';
+      ctx.fillText(tx, X(bx) + (ctx.textAlign === 'left' ? 7 : -7), (Y(fa)+Y(fb))/2);
+    }
+  }
+}
+function draw(){
+  const fa = cur.f(a), s = gridStep();
+  ctx.clearRect(0,0,W,H);
+
+  // 目盛り
+  ctx.lineWidth = 1;
+  const x0 = Math.ceil(iX(0)/s)*s, x1 = iX(W), y0 = Math.ceil(iY(H)/s)*s, y1 = iY(0);
+  for (let g = x0; g <= x1; g += s){
+    ctx.strokeStyle = Math.abs(g) < s/2 ? C.axis : C.grid;
+    ctx.beginPath(); ctx.moveTo(X(g),0); ctx.lineTo(X(g),H); ctx.stroke();
+  }
+  for (let g = y0; g <= y1; g += s){
+    ctx.strokeStyle = Math.abs(g) < s/2 ? C.axis : C.grid;
+    ctx.beginPath(); ctx.moveTo(0,Y(g)); ctx.lineTo(W,Y(g)); ctx.stroke();
+  }
+  ctx.fillStyle = C.tick; ctx.font = (11.5*FS()) + 'px sans-serif';
+  const ay = Math.min(H-4, Math.max(12, Y(0))), ax = Math.min(W-6, Math.max(14, X(0)));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let g = x0; g <= x1; g += s){
+    if (Math.abs(g) < s/2) continue;
+    ctx.fillText(lab(g,s), X(g), Math.min(H-16, ay+4));
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let g = y0; g <= y1; g += s){
+    if (Math.abs(g) < s/2) continue;
+    ctx.fillText(lab(g,s), Math.max(26, ax-6), Y(g));
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top'; ctx.fillText('0', ax-4, ay+4);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('x', W-14, Math.min(H-18, ay+4));
+  ctx.fillText('y', Math.min(W-14, ax+6), 4);
+
+  drawCurve();
+
+  if (showTan && defined(fa)){
+    ctx.setLineDash([7,6]); ctx.strokeStyle = C.tan; ctx.lineWidth = 2.5;
+    line(a, fa, der(a)); ctx.setLineDash([]);
+  }
+
+  if (showBoth){
+    const mirror = r3(a - (b-a));
+    ctx.globalAlpha = .5; drawSecant(mirror, C.sec); ctx.globalAlpha = 1;
+    const fm = cur.f(mirror);
+    if (defined(fm)) pt(X(mirror), Y(fm), C.B, false);
+  }
+  drawSecant(b, C.sec);
+
+  const fb = cur.f(b);
+  if (defined(fb)) pt(X(b), Y(fb), C.B, true);
+  if (defined(fa)) pt(X(a), Y(fa), C.A, false);
+
+  if (isInt(a) && defined(fa)){
+    ctx.strokeStyle = C.ring; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(X(a), Y(fa), 14, 0, 7); ctx.stroke();
+  }
+  if (el('crd').checked){
+    if (defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
+    if (defined(fa)) tag(X(a), Y(fa), 'A (' + fmt(a) + ', ' + fmt(fa) + ')', C.A, true);
+  } else {
+    ctx.font = 'bold ' + (13*FS()) + 'px sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    if (defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
+    if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
+  }
+}
+
+/* ================= 収束表 ================= */
+const CONV = [1, 0.5, 0.1, 0.01, 0.001];
+function buildConv(){
+  const sign = (b < a) ? -1 : 1, fa = cur.f(a), curH = Math.abs(b-a);
+  const rows = CONV.map(h => {
+    const hh = sign*h, fb = cur.f(a+hh);
+    const m = (defined(fa) && defined(fb)) ? (fb-fa)/hh : NaN;
+    const isCur = Math.abs(curH - h) < 1e-9;
+    return '<tr class="' + (isCur ? 'cur' : '') + '"><td>' + nf(hh) + '</td><td>' +
+           fmt(a+hh) + '</td><td class="m">' + fmt(m) + '</td></tr>';
+  });
+  rows.push('<tr class="goal"><td>0 に近づける</td><td>&rarr;</td><td>' + fmt(der(a)) + '</td></tr>');
+  el('convb').innerHTML = rows.join('');
+}
+
+/* ================= 状態の同期 ================= */
+function clampH(){
+  const h = b-a;
+  if (Math.abs(h) < 0.001) b = a + (h < 0 ? -0.001 : 0.001);
+  b = r3(b); a = r3(a);
+}
+function markChip(){
+  const s = norm(el('expr').value);
+  [...el('chips').children].forEach((c,i) => c.classList.toggle('sel', PRE[i].src === s));
+}
+function markH(){
+  const h = Math.abs(b-a);
+  [...el('hchips').children].forEach(c =>
+    c.classList.toggle('sel', Math.abs(parseFloat(c.dataset.h)-h) < 1e-9));
+}
+function message(fa, fb, h){
+  const box = el('msg');
+  box.className = 'msg';
+  if (!defined(fa)){
+    box.className = 'msg err';
+    box.textContent = 'x = ' + fmt(a) + ' では f(x) が定義されないため、微分係数を考えることができません。a を動かしてください。';
+    return;
+  }
+  if (!defined(fb)){
+    box.className = 'msg err';
+    box.textContent = 'x = ' + fmt(b) + ' では f(x) が定義されないため、平均変化率を計算できません。h を変えてください。';
+    return;
+  }
+  const A = Math.abs(h);
+  if (A <= 0.0015){
+    box.textContent = 'h = 0.001。2点がほとんど重なり、割線は接線とほぼ一致しました。この傾きが微分係数 f′(a) です。';
+  } else if (A < 0.05){
+    box.textContent = '差がどんどん 0 に近づいています。割線は接線に限りなく近づきます。';
+  } else if (A < 0.4){
+    box.textContent = 'かなり近づきました。平均変化率が f′(a) に寄っていきます。';
+  } else {
+    box.textContent = '点 B をドラッグして点 A に近づけてください。';
+  }
+}
+function sync(){
+  clampH(); markChip(); markH();
+  const fa = cur.f(a), fb = cur.f(b), h = b-a, m = (fb-fa)/h, m0 = der(a);
+  const ae = document.activeElement;
+  if (ae !== el('ia')) el('ia').value = nf(a);
+  if (ae !== el('ih')) el('ih').value = nf(h);
+  el('m').textContent = fmt(m);
+  el('d').textContent = fmt(m0);
+  el('er').textContent = fmt(m - m0);
+  el('fx').textContent = '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
+  el('hr').value = Math.max(0, Math.min(1000,
+    Math.round(1000*Math.log(Math.abs(h)/0.001)/Math.log(4000))));
+  buildConv();
+  message(fa, fb, h);
+  draw();
+}
+
+/* ================= 部品の生成 ================= */
+PRE.forEach(p => {
+  const bt = document.createElement('button');
+  bt.textContent = p.label;
+  bt.onclick = () => { cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
+  el('chips').appendChild(bt);
+});
+[2,1,0.5,0.1,0.01,0.001].forEach(v => {
+  const bt = document.createElement('button');
+  bt.textContent = 'h = ' + v; bt.dataset.h = v;
+  el('hchips').appendChild(bt);
+});
+el('hchips').onclick = e => {
+  const v = e.target.dataset.h;
+  if (v === undefined) return;
+  stopAnim(); setH((b < a ? -1 : 1) * parseFloat(v));
+};
+
+/* ================= 操作 ================= */
+function apply(){
+  const src = el('expr').value;
+  try {
+    const f = compile(src), hit = PRE.find(p => p.src === norm(src));
+    cur = hit ? {...hit, cx:cur.cx, cy:cur.cy, spanX:cur.spanX, spanY:cur.spanY}
+              : {src, f, d:null, cx:cur.cx, cy:cur.cy, spanX:cur.spanX, spanY:cur.spanY};
+    sync();
+  } catch(e){
+    el('msg').className = 'msg err';
+    el('msg').textContent = '式を読み取れません。' + e.message;
+  }
+}
+el('ap').onclick = apply;
+el('expr').addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); apply(); el('expr').blur(); }
+});
+el('snap').onchange = e => {
+  snapMode = e.target.value;
+  if (snapMode === 'int') setA(Math.round(a));
+  else if (snapMode === 'ten') setA(Math.round(a*10)/10);
+};
+document.querySelectorAll('[data-a]').forEach(bt => bt.onclick = () => setA(a + parseFloat(bt.dataset.a)));
+document.querySelectorAll('[data-as]').forEach(bt => bt.onclick = () => setA(parseFloat(bt.dataset.as)));
+el('ar').onclick = () => setA(Math.round(a));
+el('hf').onclick = () => { stopAnim(); setH(-(b-a)); };
+
+function readNum(inp, cb, onZero){
+  const raw = inp.value.replace(/[^\d.+\-]/g,'');
+  const v = parseFloat(raw);
+  if (!isFinite(v)) { sync(); return; }
+  if (onZero && v === 0){ onZero(); return; }
+  cb(v);
+}
+el('ia').addEventListener('change', () => readNum(el('ia'), setA));
+el('ih').addEventListener('change', () => {
+  stopAnim();
+  readNum(el('ih'), setH, () => {
+    // h = 0 は「入れさせて、なぜ駄目かを示す」。ここが授業の要点になる。
+    sync();
+    el('msg').className = 'msg warn';
+    el('msg').textContent = 'h = 0 にすると分母が 0 になり、平均変化率を計算できません。'
+      + 'だからこそ h を 0 そのものにはせず、限りなく 0 に近づけます。これが極限の考え方です。';
+  });
+});
+[el('ia'), el('ih')].forEach(i => i.addEventListener('keydown', e => {
+  if (e.key === 'Enter'){ e.preventDefault(); i.blur(); }
+}));
+el('crd').onchange = draw;
+el('hlp').onchange = draw;
+el('rv').onclick = () => { view(); sync(); };
+el('rs').onclick = () => {
+  stopAnim(); cur = {...PRE[0]}; el('expr').value = PRE[0].src;
+  a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
+  snapMode = 'mag'; el('snap').value = 'mag';
+  showTan = true; showBoth = false;
+  el('crd').checked = true; el('hlp').checked = true;
+  syncToggles(); view(); sync();
+};
+
+function stopAnim(){
+  if (animId){ cancelAnimationFrame(animId); animId = null; el('anim').textContent = 'h を 0 に近づける'; }
+}
+el('hr').oninput = e => {
+  stopAnim();
+  const sg = b < a ? -1 : 1;
+  b = r3(a + sg*0.001*Math.pow(4000, e.target.value/1000));
+  sync();
+};
+el('anim').onclick = () => {
+  if (animId){ stopAnim(); return; }
+  if (Math.abs(b-a) < 0.02) b = a + (b < a ? -2.5 : 2.5);
+  el('anim').textContent = '停止';
+  const stepFn = () => {
+    b = a + (b-a)*0.93;
+    if (Math.abs(b-a) <= 0.001){
+      b = a + (b < a ? -0.001 : 0.001); sync(); stopAnim(); return;
+    }
+    sync(); animId = requestAnimationFrame(stepFn);
+  };
+  animId = requestAnimationFrame(stepFn);
+};
+
+/* ---- トグル類 ---- */
+function syncToggles(){
+  el('tgTan').classList.toggle('on', showTan);
+  el('tgTan').textContent = showTan ? '接線を表示' : '接線を隠す';
+  el('tgBoth').classList.toggle('on', showBoth);
+  el('lg1').style.borderTop = '3px solid ' + C.sec;
+  el('lg2').style.borderTop = '3px dashed ' + C.tan;
+  el('lg3').style.borderTop = '3px solid ' + C.curve;
+}
+el('tgTan').onclick = () => { showTan = !showTan; syncToggles(); draw(); };
+el('tgBoth').onclick = () => { showBoth = !showBoth; syncToggles(); draw(); };
+el('tgPanel').onclick = () => {
+  const closed = el('main').classList.toggle('closed');
+  el('tgPanel').textContent = closed ? 'パネルを出す' : 'パネルを隠す';
+  requestAnimationFrame(() => resize(true));
+};
+el('tgTheme').onclick = () => {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  C = THEME[theme];
+  document.documentElement.dataset.theme = theme;
+  el('tgTheme').textContent = theme === 'dark' ? '白い背景' : '暗い背景';
+  syncToggles(); draw();
+};
+const SIZES = [1, 1.3, 1.6], SIZE_LABEL = ['文字を大きく', '文字をもっと大きく', '文字を戻す'];
+el('tgSize').onclick = () => {
+  sizeStep = (sizeStep + 1) % SIZES.length;
+  document.documentElement.style.setProperty('--s', SIZES[sizeStep]);
+  el('tgSize').textContent = SIZE_LABEL[sizeStep];
+  requestAnimationFrame(() => resize(true));
+};
+
+/* ---- キーボード ---- */
+addEventListener('keydown', e => {
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test((document.activeElement || {}).tagName || '')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight'){
+    e.preventDefault();
+    const d = e.shiftKey ? 1 : (e.altKey ? 0.001 : 0.1);
+    setA(a + (e.key === 'ArrowRight' ? d : -d)); return;
+  }
+  const k = e.key.toLowerCase();
+  if (k === 't'){ e.preventDefault(); el('tgTan').click(); }
+  else if (k === 'p'){ e.preventDefault(); el('tgPanel').click(); }
+  else if (e.key === ' '){ e.preventDefault(); el('anim').click(); }
+});
+
+/* ---- ポインタ ---- */
+const ptrs = new Map();
+let pinch = null, panFrom = null;
+const loc = e => { const r = cv.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; };
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  const p = loc(e); ptrs.set(e.pointerId, p);
+  if (ptrs.size === 2){
+    drag = null; panFrom = null;
+    const [p1,p2] = [...ptrs.values()];
+    pinch = {d:Math.hypot(p1.x-p2.x, p1.y-p2.y), mx:(p1.x+p2.x)/2, my:(p1.y+p2.y)/2};
+    return;
+  }
+  stopAnim();
+  const da = Math.hypot(p.x-X(a), p.y-Y(cur.f(a))), db = Math.hypot(p.x-X(b), p.y-Y(cur.f(b)));
+  if (Math.min(da,db) < 40){ drag = (da < db) ? 'a' : 'b'; move(p); } else { panFrom = p; }
+});
+function move(p){
+  const x = snapX(iX(p.x));
+  if (drag === 'a'){ const h = b-a; a = x; b = r3(a+h); } else { b = x; }
+  sync();
+}
+cv.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const p = loc(e); ptrs.set(e.pointerId, p);
+  if (pinch && ptrs.size >= 2){
+    const [p1,p2] = [...ptrs.values()];
+    const d = Math.hypot(p1.x-p2.x, p1.y-p2.y), mx = (p1.x+p2.x)/2, my = (p1.y+p2.y)/2;
+    const k = Math.max(.2, Math.min(5, d/pinch.d));
+    ox = mx-(pinch.mx-ox)*k; oy = my-(pinch.my-oy)*k; scale *= k;
+    pinch = {d,mx,my}; draw(); return;
+  }
+  if (drag) move(p);
+  else if (panFrom){ ox += p.x-panFrom.x; oy += p.y-panFrom.y; panFrom = p; draw(); }
+});
+function endPtr(e){
+  ptrs.delete(e.pointerId);
+  if (ptrs.size < 2) pinch = null;
+  if (!ptrs.size){ drag = null; panFrom = null; }
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p = loc(e), k = Math.exp(-e.deltaY*0.0015);
+  ox = p.x-(p.x-ox)*k; oy = p.y-(p.y-oy)*k; scale *= k; draw();
+}, {passive:false});
+
+addEventListener('resize', () => resize(true));
+syncToggles();
+resize(false);
+</script>
+</body>
+</html>
