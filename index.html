@@ -164,8 +164,6 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
   <section class="stage">
     <canvas id="cv"></canvas>
     <div class="legend">
-      <div><b class="dot" style="background:#0b62c4"></b><span>点 A ( a , f(a) ) … 接線を引く点</span></div>
-      <div><b class="dot" style="background:#c2560a"></b><span>点 B ( a+h , f(a+h) ) … 動かす点</span></div>
       <div><i id="lg1"></i><span>割線（A と B を通る直線）</span></div>
       <div><i id="lg2"></i><span>接線（A で接する直線）</span></div>
       <div><i id="lg3"></i><span>y = f(x)</span></div>
@@ -174,38 +172,45 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
 
   <aside id="side">
 
-    <!-- 1. 点を動かす -->
+    <!-- 1. 点 A を動かす -->
     <details class="sec" open>
-      <summary>点を動かす</summary>
+      <summary>点 A を動かす</summary>
       <div class="body">
-
         <div class="grp pa">
-          <div class="hd"><span class="dot" style="background:var(--a)"></span>点 A（青）を置く場所</div>
-          <p class="note">接線を引く点です。この x 座標を <b>a</b> と呼びます。</p>
+          <p class="note"><b>A</b> は青い点そのものの名前、<b>a</b> はその x 座標を表す文字です。
+            接線はこの点 A で引きます。</p>
           <div class="row">
-            <span class="lbl">a =</span>
+            <span class="lbl">x 座標　a =</span>
             <input id="ia" class="num" type="text" inputmode="decimal" spellcheck="false">
+          </div>
+          <div class="row">
+            <span class="lbl">少し動かす</span>
             <button class="sm" data-a="-1">&minus;1</button>
             <button class="sm" data-a="-0.1">&minus;0.1</button>
             <button class="sm" data-a="0.1">+0.1</button>
             <button class="sm" data-a="1">+1</button>
           </div>
           <div class="chips">
-            <button data-as="0">a = 0</button>
-            <button data-as="1">a = 1</button>
-            <button data-as="2">a = 2</button>
+            <button data-as="0">A を x = 0 へ</button>
+            <button data-as="1">A を x = 1 へ</button>
+            <button data-as="2">A を x = 2 へ</button>
             <button id="ar">整数に丸める</button>
           </div>
           <div class="eq">点 A の座標 &nbsp; ( <b id="eqa">-</b> , <b id="eqfa">-</b> )</div>
         </div>
+      </div>
+    </details>
 
+    <!-- 2. 点 B を動かす -->
+    <details class="sec" open>
+      <summary>点 B を動かす</summary>
+      <div class="body">
         <div class="grp pb">
-          <div class="hd"><span class="dot" style="background:var(--b)"></span>点 B（橙）を A からどれだけ離すか</div>
-          <p class="note">A から横に <b>h</b> だけ離れた点が B です。この h を 0 に近づけていきます。</p>
+          <p class="note"><b>B</b> は橙の点、<b>h</b> は A から B までの横のずれです。
+            B の x 座標は a + h になります。</p>
           <div class="row">
-            <span class="lbl">h =</span>
+            <span class="lbl">A からのずれ　h =</span>
             <input id="ih" class="num" type="text" inputmode="decimal" spellcheck="false">
-            <button id="hf" class="sm">A の反対側へ</button>
           </div>
           <div class="chips warm" id="hchips"></div>
           <div class="row" style="margin-top:calc(10px * var(--s))">
@@ -213,26 +218,30 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
             <input id="hr" type="range" min="0" max="1000" value="850">
             <span class="lbl">大きい</span>
           </div>
+          <div class="row"><button id="hf" class="sm" style="flex:1">A の反対側へ移す</button></div>
           <div class="eq">点 B の座標 &nbsp; ( a + h = <b id="eqb">-</b> , <b id="eqfb">-</b> )</div>
         </div>
-
-        <div class="grp">
-          <div class="hd">h を 0 に近づける</div>
-          <div class="row">
-            <span class="lbl">速さ</span>
-            <span class="chips" id="spd" style="margin:0"></span>
-          </div>
-          <div class="row">
-            <button id="anim" class="primary" style="flex:1">開始</button>
-          </div>
-        </div>
-
       </div>
     </details>
 
-    <!-- 2. 細かい設定 -->
+    <!-- 3. h を 0 に近づける -->
+    <details class="sec" open>
+      <summary>h を 0 に近づける</summary>
+      <div class="body">
+        <p class="note" style="margin-top:0">B が A に重なるまで動かします。最後は割線が接線とぴったり一致します。</p>
+        <div class="row">
+          <span class="lbl">速さ</span>
+          <span class="chips" id="spd" style="margin:0"></span>
+        </div>
+        <div class="row">
+          <button id="anim" class="primary" style="flex:1">開始</button>
+        </div>
+      </div>
+    </details>
+
+    <!-- 4. グラフの見え方 -->
     <details class="sec">
-      <summary>細かい設定</summary>
+      <summary>グラフの見え方（吸着・座標・補助線）</summary>
       <div class="body">
         <div class="row">
           <span class="lbl">点の吸着</span>
@@ -243,8 +252,8 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
             <option value="free">自由（0.001 刻み）</option>
           </select>
         </div>
-        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に座標を表示</label></div>
-        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線</label></div>
+        <div class="row"><label class="ck"><input type="checkbox" id="crd" checked> グラフ上に A・B の座標を表示</label></div>
+        <div class="row"><label class="ck"><input type="checkbox" id="hlp" checked> h と f(a+h)&minus;f(a) の補助線を表示</label></div>
         <div class="row">
           <button id="rv" class="sm" style="flex:1">表示位置を戻す</button>
           <button id="rs" class="sm" style="flex:1">すべて初期化</button>
@@ -257,7 +266,7 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
       </div>
     </details>
 
-    <!-- 3. 関数を変える -->
+    <!-- 5. 関数を変える -->
     <details class="sec">
       <summary>関数を変える</summary>
       <div class="body">
@@ -274,7 +283,7 @@ kbd{background:var(--card);border:1px solid var(--edge);border-bottom-width:2px;
     </details>
 
     <!-- 4. 数値 -->
-    <details class="sec" open>
+    <details class="sec">
       <summary>数値</summary>
       <div class="body">
         <div class="ro main">
@@ -318,6 +327,9 @@ const PRE = [
 let cur = {...PRE[0]}, a = 1, b = 3;
 let W = 0, H = 0, scale = 1, ox = 0, oy = 0;
 let animId = null, drag = null, snapMode = 'mag', showTan = true, sizeStep = 0;
+/* h を 0 に近づけきった「極限に到達した」状態。
+   割線を接線と同じ傾きで描いて視覚的に一致させる。点を動かすと解除される。 */
+let atLimit = false;
 
 /* アニメーションの減衰率。1 に近いほどゆっくり。
    授業では説明しながら見せるため、既定を最も遅い設定にしている。 */
@@ -392,8 +404,9 @@ function snapX(x){
   if (Math.abs(x-t)*scale < 6) return r3(t);
   return r3(x);
 }
-function setA(v){ const h = b-a; a = r3(v); b = r3(a+h); sync(); }
+function setA(v){ atLimit = false; const h = b-a; a = r3(v); b = r3(a+h); sync(); }
 function setH(v){
+  atLimit = false;
   if (Math.abs(v) < 0.001) v = (v < 0 ? -0.001 : 0.001);
   b = r3(a+v); sync();
 }
@@ -493,8 +506,8 @@ function draw(){
 
   if (defined(fa) && defined(fb)){
     ctx.strokeStyle = C.sec; ctx.lineWidth = 3;
-    line(a, fa, (fb-fa)/(b-a));
-    if (el('hlp').checked){
+    line(a, fa, atLimit ? der(a) : (fb-fa)/(b-a));
+    if (el('hlp').checked && !atLimit){
       ctx.setLineDash([4,4]); ctx.strokeStyle = C.aux; ctx.lineWidth = 1.5;
       ctx.beginPath();
       ctx.moveTo(X(a),Y(fa)); ctx.lineTo(X(b),Y(fa)); ctx.lineTo(X(b),Y(fb));
@@ -511,7 +524,8 @@ function draw(){
     }
   }
 
-  if (defined(fb)) pt(X(b), Y(fb), C.B, true);
+  if (atLimit){ if (defined(fa)) pt(X(a), Y(fa), C.B, true); }
+  else if (defined(fb)) pt(X(b), Y(fb), C.B, true);
   if (defined(fa)) pt(X(a), Y(fa), C.A, false);
 
   if (isInt(a) && defined(fa)){
@@ -519,12 +533,12 @@ function draw(){
     ctx.beginPath(); ctx.arc(X(a), Y(fa), 14, 0, 7); ctx.stroke();
   }
   if (el('crd').checked){
-    if (defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
+    if (!atLimit && defined(fb)) tag(X(b), Y(fb), 'B (' + fmt(b) + ', ' + fmt(fb) + ')', C.B, false);
     if (defined(fa)) tag(X(a), Y(fa), 'A (' + fmt(a) + ', ' + fmt(fa) + ')', C.A, true);
   } else {
     ctx.font = 'bold ' + (14*FS()) + 'px sans-serif';
     ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    if (defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
+    if (!atLimit && defined(fb)){ ctx.fillStyle = C.B; ctx.fillText('B', X(b)+12, Y(fb)-10); }
     if (defined(fa)){ ctx.fillStyle = C.A; ctx.fillText('A', X(a)+12, Y(fa)-10); }
   }
 }
@@ -547,6 +561,12 @@ function markH(){
 function message(fa, fb, h){
   const box = el('msg');
   box.className = 'msg';
+  if (atLimit && defined(fa)){
+    box.textContent = 'h を限りなく 0 に近づけた結果、割線は接線とぴったり重なりました。'
+      + 'この傾き ' + fmt(der(a)) + ' が微分係数 f′(a) です。'
+      + 'h は 0 そのものにはできませんが、いくらでも 0 に近づけることができます。';
+    return;
+  }
   if (!defined(fa)){
     box.className = 'msg err';
     box.textContent = 'x = ' + fmt(a) + ' では f(x) が定義されないため、微分係数を考えることができません。a を動かしてください。';
@@ -575,11 +595,14 @@ function sync(){
   if (ae !== el('ia')) el('ia').value = nf(a);
   if (ae !== el('ih')) el('ih').value = nf(h);
   el('eqa').textContent = fmt(a);   el('eqfa').textContent = fmt(fa);
-  el('eqb').textContent = fmt(b);   el('eqfb').textContent = fmt(fb);
-  el('m').textContent = fmt(m);
+  el('eqb').textContent = atLimit ? fmt(a) : fmt(b);
+  el('eqfb').textContent = atLimit ? fmt(fa) : fmt(fb);
+  el('m').textContent = fmt(atLimit ? m0 : m);
   el('d').textContent = fmt(m0);
-  el('er').textContent = fmt(m - m0);
-  el('fx').textContent = '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
+  el('er').textContent = fmt(atLimit ? 0 : m - m0);
+  el('fx').textContent = atLimit
+    ? 'h → 0 のとき  平均変化率 → ' + fmt(m0)
+    : '( ' + fmt(fb) + ' − ' + fmt(fa) + ' ) ÷ ' + fmt(h) + ' = ' + fmt(m);
   el('hr').value = Math.max(0, Math.min(1000,
     Math.round(1000*Math.log(Math.abs(h)/0.001)/Math.log(4000))));
   message(fa, fb, h);
@@ -590,10 +613,10 @@ function sync(){
 PRE.forEach(p => {
   const bt = document.createElement('button');
   bt.textContent = p.label;
-  bt.onclick = () => { cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
+  bt.onclick = () => { atLimit = false; cur = {...p}; el('expr').value = p.src; a = p.a; b = r3(p.a + p.h); view(); sync(); };
   el('chips').appendChild(bt);
 });
-[2,1,0.5,0.1,0.01,0.001].forEach(v => {
+[2,1,0.5].forEach(v => {
   const bt = document.createElement('button');
   bt.textContent = 'h = ' + v; bt.dataset.h = v;
   el('hchips').appendChild(bt);
@@ -615,6 +638,7 @@ function markSpeed(){
 
 /* ================= 操作 ================= */
 function apply(){
+  atLimit = false;
   const src = el('expr').value;
   try {
     const f = compile(src), hit = PRE.find(p => p.src === norm(src));
@@ -664,7 +688,7 @@ el('crd').onchange = draw;
 el('hlp').onchange = draw;
 el('rv').onclick = () => { view(); sync(); };
 el('rs').onclick = () => {
-  stopAnim(); cur = {...PRE[0]}; el('expr').value = PRE[0].src;
+  stopAnim(); atLimit = false; cur = {...PRE[0]}; el('expr').value = PRE[0].src;
   a = PRE[0].a; b = r3(PRE[0].a + PRE[0].h);
   snapMode = 'mag'; el('snap').value = 'mag';
   showTan = true; speed = 0;
@@ -676,20 +700,23 @@ function stopAnim(){
   if (animId){ cancelAnimationFrame(animId); animId = null; el('anim').textContent = '開始'; }
 }
 el('hr').oninput = e => {
-  stopAnim();
+  stopAnim(); atLimit = false;
   const sg = b < a ? -1 : 1;
   b = r3(a + sg*0.001*Math.pow(4000, e.target.value/1000));
   sync();
 };
 el('anim').onclick = () => {
   if (animId){ stopAnim(); return; }
+  atLimit = false;
   if (Math.abs(b-a) < 0.02) b = a + (b < a ? -2.5 : 2.5);
   el('anim').textContent = '停止';
   const k = SPEEDS[speed].k;
   const stepFn = () => {
     b = a + (b-a)*k;
     if (Math.abs(b-a) <= 0.001){
-      b = a + (b < a ? -0.001 : 0.001); sync(); stopAnim(); return;
+      b = a + (b < a ? -0.001 : 0.001);
+      atLimit = true;            // ここで割線と接線がぴったり重なる
+      sync(); stopAnim(); return;
     }
     sync(); animId = requestAnimationFrame(stepFn);
   };
@@ -750,6 +777,7 @@ cv.addEventListener('pointerdown', e => {
   if (Math.min(da,db) < 40){ drag = (da < db) ? 'a' : 'b'; move(p); } else { panFrom = p; }
 });
 function move(p){
+  atLimit = false;
   const x = snapX(iX(p.x));
   if (drag === 'a'){ const h = b-a; a = x; b = r3(a+h); } else { b = x; }
   sync();
